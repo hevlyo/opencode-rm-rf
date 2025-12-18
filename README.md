@@ -2,6 +2,8 @@
 
 A Claude Code hook that blocks destructive file deletion commands and directs users to use `trash` instead. This ensures deleted files can be recovered from the system trash.
 
+> **Note:** This is a best-effort attempt to catch common destructive patterns, not a comprehensive security barrier. There will always be edge cases and creative ways to delete files that aren't covered. Use this as one layer of defense, not the only one.
+
 ## Blocked Patterns
 
 **Direct commands:**
