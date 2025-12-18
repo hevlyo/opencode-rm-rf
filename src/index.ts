@@ -32,16 +32,49 @@ function containsDestructiveCommand(command: string): boolean {
     return false;
   }
 
+  // Subshell patterns need to check the ORIGINAL command since
+  // the dangerous command is intentionally inside quotes
+  const subshellPatterns = [
+    /\b(?:sh|bash|zsh|dash)\s+-c\s+.*\brm\b/,
+    /\b(?:sh|bash|zsh|dash)\s+-c\s+.*\bshred\b/,
+    /\b(?:sh|bash|zsh|dash)\s+-c\s+.*\bunlink\b/,
+    /\b(?:sh|bash|zsh|dash)\s+-c\s+.*\bfind\b.*-delete\b/,
+  ];
+
+  if (subshellPatterns.some((pattern) => pattern.test(command))) {
+    return true;
+  }
+
   // Patterns that indicate rm/shred/unlink being used as actual commands:
   // - At start of command
   // - After shell operators: &&, ||, ;, |, $(, `
-  // - After sudo or xargs
+  // - After sudo, xargs, command, env
+  // - With absolute/relative paths like /bin/rm, /usr/bin/rm, ./rm
   const destructivePatterns = [
+    // Basic commands at start or after operators
     /(?:^|&&|\|\||;|\||\$\(|`)\s*rm\b/,
     /(?:^|&&|\|\||;|\||\$\(|`)\s*shred\b/,
     /(?:^|&&|\|\||;|\||\$\(|`)\s*unlink\b/,
+
+    // Absolute/relative paths to rm
+    /(?:^|&&|\|\||;|\||\$\(|`)\s*\/.*\/rm\b/,
+    /(?:^|&&|\|\||;|\||\$\(|`)\s*\.\/rm\b/,
+
+    // Via sudo, xargs, command, env
     /\bsudo\s+rm\b/,
+    /\bsudo\s+\/.*\/rm\b/,
     /\bxargs\s+rm\b/,
+    /\bxargs\s+\/.*\/rm\b/,
+    /\bcommand\s+rm\b/,
+    /\benv\s+rm\b/,
+
+    // Backslash escape to bypass aliases
+    /(?:^|&&|\|\||;|\||\$\(|`)\s*\\rm\b/,
+
+    // find with -delete or -exec rm
+    /\bfind\b.*\s-delete\b/,
+    /\bfind\b.*-exec\s+rm\b/,
+    /\bfind\b.*-exec\s+\/.*\/rm\b/,
   ];
 
   return destructivePatterns.some((pattern) => pattern.test(stripped));
