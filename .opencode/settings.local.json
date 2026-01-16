@@ -12,7 +12,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run $CLAUDE_PROJECT_DIR/src/index.ts"
+            "command": "bun run $OPENCODE_PROJECT_DIR/src/index.ts"
           }
         ]
       }

@@ -1,6 +1,6 @@
-# Block Destructive Commands
+# OpenCode Block Destructive Commands
 
-A Claude Code hook that blocks destructive file deletion commands and directs users to use `trash` instead. This ensures deleted files can be recovered from the system trash.
+An OpenCode hook that blocks destructive file deletion commands and directs users to use `trash` instead. This ensures deleted files can be recovered from the system trash.
 
 > **Note:** This is a best-effort attempt to catch common destructive patterns, not a comprehensive security barrier. There will always be edge cases and creative ways to delete files that aren't covered. Use this as one layer of defense, not the only one.
 
@@ -51,13 +51,13 @@ npm install -g trash-cli
 
 ```bash
 git clone <repo-url>
-cd claude-rm-rf
+cd opencode-rm-rf
 bun install
 ```
 
-### 4. Configure Claude Code
+### 4. Configure OpenCode
 
-Add to your `.claude/settings.json` or `.claude/settings.local.json`:
+Add to your `.opencode/settings.json` or `.opencode/settings.local.json`:
 
 ```json
 {
@@ -68,7 +68,7 @@ Add to your `.claude/settings.json` or `.claude/settings.local.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "bun run /path/to/claude-rm-rf/src/index.ts"
+            "command": "bun run /path/to/opencode-rm-rf/src/index.ts"
           }
         ]
       }
@@ -77,7 +77,7 @@ Add to your `.claude/settings.json` or `.claude/settings.local.json`:
 }
 ```
 
-Replace `/path/to/claude-rm-rf` with the actual path, or use `$CLAUDE_PROJECT_DIR` if installing per-project.
+Replace `/path/to/opencode-rm-rf` with the actual path, or use `$OPENCODE_PROJECT_DIR` if installing per-project.
 
 ## Development
 
@@ -93,7 +93,7 @@ bun run build
 
 The hook runs on every `Bash` tool call via the `PreToolUse` event:
 
-1. Parses JSON input from Claude Code (stdin)
+1. Parses JSON input from OpenCode (stdin)
 2. Strips quoted strings to avoid false positives
 3. Checks for destructive patterns
 4. Returns exit code 2 with error message if blocked

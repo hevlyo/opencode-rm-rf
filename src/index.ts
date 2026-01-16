@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Block destructive file deletion commands and suggest using trash instead.
- * This is a Claude Code hook that runs on PreToolUse for Bash commands.
+ * This is a OpenCode hook that runs on PreToolUse for Bash commands.
  */
 
 interface ToolInput {
