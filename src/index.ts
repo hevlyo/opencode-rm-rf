@@ -1,10 +1,9 @@
 #!/usr/bin/env bun
 import { parse } from "shell-quote";
-
-/**
- * Block destructive file deletion commands and suggest using trash instead.
- * This is a OpenCode hook that runs on PreToolUse for Bash commands.
- */
+import { execSync } from "child_process";
+import { appendFileSync, mkdirSync, existsSync } from "fs";
+import { join, dirname, basename } from "path";
+import { homedir } from "os";
 
 interface ToolInput {
   tool_input?: {
@@ -12,14 +11,15 @@ interface ToolInput {
   };
 }
 
-const BLOCKED_COMMANDS = new Set(["rm", "shred", "unlink", "wipe", "srm"]);
+const DEFAULT_BLOCKED = new Set(["rm", "shred", "unlink", "wipe", "srm"]);
 const SHELL_COMMANDS = new Set(["sh", "bash", "zsh", "dash"]);
+const CRITICAL_PATHS = new Set([
+    "/", "/etc", "/usr", "/var", "/bin", "/sbin", "/lib", "/boot", "/root", "/dev", "/proc", "/sys"
+]);
+const VOLUME_THRESHOLD = parseInt(process.env.SHELLSHIELD_THRESHOLD || "50", 10);
 
-/**
- * Get configuration from environment variables.
- */
 function getConfiguration() {
-    const blocked = new Set(BLOCKED_COMMANDS);
+    const blocked = new Set(DEFAULT_BLOCKED);
     const allowed = new Set<string>();
 
     if (process.env.OPENCODE_BLOCK_COMMANDS) {
@@ -35,12 +35,55 @@ function getConfiguration() {
 
 interface BlockResult {
   blocked: boolean;
+  reason?: string;
   suggestion?: string;
 }
 
-/**
- * Check if a command is destructive and return a suggestion if so.
- */
+function isCriticalPath(path: string): boolean {
+    if (path === "/") return true;
+    const normalized = path.replace(/\/+$/, "");
+    if (CRITICAL_PATHS.has(normalized)) return true;
+    if (normalized === ".git" || normalized.endsWith("/.git")) return true;
+    return false;
+}
+
+function hasUncommittedChanges(files: string[]): string[] {
+    try {
+        const results: string[] = [];
+        for (const file of files) {
+            if (file.startsWith("-")) continue;
+            try {
+                const isAbsolute = file.startsWith("/");
+                const dir = isAbsolute ? dirname(file) : ".";
+                const name = isAbsolute ? basename(file) : file;
+                const status = execSync(`git -C "${dir}" status --porcelain "${name}" 2>/dev/null`, { encoding: "utf8" }).trim();
+                if (status) results.push(file);
+            } catch {
+            }
+        }
+        return results;
+    } catch {
+        return [];
+    }
+}
+
+function logAudit(command: string, result: BlockResult) {
+    try {
+        const auditDir = join(homedir(), ".shellshield");
+        if (!existsSync(auditDir)) mkdirSync(auditDir, { recursive: true });
+        const logPath = join(auditDir, "audit.log");
+        const entry = {
+            timestamp: new Date().toISOString(),
+            command,
+            blocked: result.blocked,
+            reason: result.reason,
+            cwd: process.cwd()
+        };
+        appendFileSync(logPath, JSON.stringify(entry) + "\n");
+    } catch (e) {
+    }
+}
+
 function checkDestructive(command: string, depth = 0): BlockResult {
   if (depth > 5) return { blocked: false };
 
@@ -99,8 +142,8 @@ function checkDestructive(command: string, depth = 0): BlockResult {
       }
     }
 
-    const basename = entry.split("/").pop() ?? "";
-    const cmdName = entry.startsWith("\\") ? entry.slice(1) : basename;
+    const basenamePart = entry.split("/").pop() ?? "";
+    const cmdName = entry.startsWith("\\") ? entry.slice(1) : basenamePart;
 
     let resolvedCmd = cmdName.toLowerCase();
     if (cmdName.startsWith("$")) {
@@ -112,36 +155,52 @@ function checkDestructive(command: string, depth = 0): BlockResult {
         continue;
     }
 
-    if (configBlocked.has(resolvedCmd)) {
-        let suggestion = "trash <files>";
-        if (resolvedCmd === "rm") {
-            const args = entries.slice(i + 1).filter(e => typeof e === "string") as string[];
-            const nonFlags = args.filter(a => !a.startsWith("-"));
-            if (nonFlags.length > 0) {
-                suggestion = `trash ${nonFlags.join(" ")}`;
+    if (configBlocked.has(resolvedCmd) || resolvedCmd === "dd") {
+        const args = entries.slice(i + 1).filter(e => typeof e === "string") as string[];
+        
+        if (resolvedCmd === "dd") {
+            if (args.some(a => a.toLowerCase().startsWith("of="))) {
+                return { blocked: true, reason: "Destructive dd detected", suggestion: "be careful with dd of=" };
+            }
+            continue; 
+        }
+
+        for (const arg of args) {
+            if (!arg.startsWith("-") && isCriticalPath(arg)) {
+                return { blocked: true, reason: "CRITICAL PATH PROTECTED", suggestion: `Permanent deletion of ${arg} is prohibited.` };
             }
         }
-        return { blocked: true, suggestion };
+
+        const targetFiles = args.filter(a => !a.startsWith("-"));
+        if (targetFiles.length > VOLUME_THRESHOLD) {
+            return { blocked: true, reason: "VOLUME THRESHOLD EXCEEDED", suggestion: `You are trying to delete ${targetFiles.length} files. Use a more specific command.` };
+        }
+
+        const uncommitted = hasUncommittedChanges(targetFiles);
+        if (uncommitted.length > 0) {
+            return { blocked: true, reason: "UNCOMMITTED CHANGES DETECTED", suggestion: `Commit changes to these files first: ${uncommitted.join(", ")}` };
+        }
+
+        let suggestion = "trash <files>";
+        if (resolvedCmd === "rm") {
+            if (targetFiles.length > 0) {
+                suggestion = `trash ${targetFiles.join(" ")}`;
+            }
+        }
+        return { blocked: true, reason: `Destructive command '${resolvedCmd}' detected`, suggestion };
     }
 
     if (resolvedCmd === "find") {
         const remaining = entries.slice(i + 1);
         if (remaining.some(e => typeof e === "string" && e.toLowerCase() === "-delete")) {
-            return { blocked: true, suggestion: "trash <files>" };
+            return { blocked: true, reason: "find -delete detected", suggestion: "trash <files>" };
         }
         const execIdx = remaining.findIndex(e => typeof e === "string" && e.toLowerCase() === "-exec");
         if (execIdx !== -1 && execIdx + 1 < remaining.length) {
             const execCmd = remaining[execIdx + 1];
             if (typeof execCmd === "string" && configBlocked.has(execCmd.split("/").pop()?.toLowerCase() ?? "")) {
-                return { blocked: true, suggestion: "trash <files>" };
+                return { blocked: true, reason: `find -exec ${execCmd} detected`, suggestion: "trash <files>" };
             }
-        }
-    }
-
-    if (resolvedCmd === "dd") {
-        const remaining = entries.slice(i + 1);
-        if (remaining.some(e => typeof e === "string" && e.toLowerCase().startsWith("of="))) {
-            return { blocked: true, suggestion: "be careful with dd of=" };
         }
     }
 
@@ -173,13 +232,15 @@ async function main(): Promise<void> {
     }
 
     const result = checkDestructive(command);
+    logAudit(command, result);
 
     if (result.blocked) {
       console.error(
-        `🛡️  ShellShield BLOCKED: Destructive command detected.\n` +
-        `Instead of deleting permanently, use 'trash':\n` +
-        `  ${result.suggestion ?? "trash <file>"}\n\n` +
-        `ShellShield helps you keep your files safe. To bypass this, see the documentation.`
+        `🛡️  ShellShield BLOCKED: ${result.reason}\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `ACTION REQUIRED: ${result.suggestion}\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `ShellShield v2.0 - Keeping your terminal safe.`
       );
       process.exit(2);
     }

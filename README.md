@@ -1,10 +1,19 @@
-# 🛡️ ShellShield
+# 🛡️ ShellShield v2.0
 
 **The ultimate safety shield for your terminal.**
 
-ShellShield is an OpenCode hook that blocks destructive file deletion commands and directs users to use `trash` instead. This ensures deleted files can be recovered from the system trash.
+ShellShield is a high-performance OpenCode hook that blocks destructive commands, protects critical system paths, and ensures your Git workflow remains safe. It's the governance layer your terminal deserves.
 
-> **Note:** This is a best-effort attempt to catch common destructive patterns, not a comprehensive security barrier. Use this as one layer of defense, not the only one.
+> **Note:** ShellShield provides robust protection but is not a substitute for regular backups. Use it as your first line of defense.
+
+## ✨ New in v2.0
+
+-   🛡️ **Critical Path Protection**: Automatically blocks deletion of system directories like `/etc`, `/usr`, and project-critical folders like `.git`.
+-   Commit First, Delete Later**: Blocks deletion of files with uncommitted Git changes to prevent data loss.
+-   🚀 **Volume Threshold Protection**: Intercepts commands targeting a large number of files (default > 50) to prevent globbing accidents.
+-   📜 **Security Audit Log**: Keeps a JSON-formatted log of all intercepted actions in `~/.shellshield/audit.log`.
+-   🧠 **Recursive Subshell Analysis**: Dives deep into nested subshells (`sh -c "bash -c '...' "`) to find hidden threats.
+-   Variable Expansion Tracking**: Detects bypass attempts using variables like `CMD=rm; $CMD file`.
 
 ## 🛡️ Blocked Patterns
 
@@ -31,14 +40,15 @@ ShellShield is an OpenCode hook that blocks destructive file deletion commands a
 
 - `git rm` (tracked by git, recoverable)
 - `echo 'rm test'` (quoted strings are safe)
-- All other commands
+- Commands that don't match destructive patterns
 
 ## ⚙️ Configuration
 
-You can customize the blocked and allowed commands using environment variables:
+Customize ShellShield using environment variables in your OpenCode settings:
 
 - `OPENCODE_BLOCK_COMMANDS`: Comma-separated list of additional commands to block.
-- `OPENCODE_ALLOW_COMMANDS`: Comma-separated list of commands to explicitly allow (even if they are in the default blocked list).
+- `OPENCODE_ALLOW_COMMANDS`: Comma-separated list of commands to explicitly allow.
+- `SHELLSHIELD_THRESHOLD`: Number of files allowed in a single command before blocking (default: 50).
 
 Example in `.opencode/settings.json`:
 
@@ -53,8 +63,8 @@ Example in `.opencode/settings.json`:
             "type": "command",
             "command": "bun run /path/to/shellshield/src/index.ts",
             "env": {
-              "OPENCODE_BLOCK_COMMANDS": "custom-delete",
-              "OPENCODE_ALLOW_COMMANDS": "rm"
+              "SHELLSHIELD_THRESHOLD": "20",
+              "OPENCODE_BLOCK_COMMANDS": "custom-delete"
             }
           }
         ]
@@ -74,6 +84,8 @@ curl -fsSL https://bun.sh/install | bash
 
 ### 2. Install the trash CLI
 
+ShellShield suggests using `trash` for safe deletions.
+
 ```bash
 # macOS
 brew install trash
@@ -82,36 +94,24 @@ brew install trash
 npm install -g trash-cli
 ```
 
-### 3. Clone and install
+### 3. Clone and install ShellShield
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/your-user/shellshield.git
 cd shellshield
 bun install
 ```
 
-### 4. Configure OpenCode
-
-(See Configuration section above)
-
 ## 🛠️ Development
 
 ```bash
-# Run tests (44 test cases)
+# Run the full test suite (49 test cases)
 bun test
-
-# Build standalone executable (optional, ~60MB)
-bun run build
 ```
 
 ## 🧠 How It Works
 
-The hook runs on every `Bash` tool call via the `PreToolUse` event:
+ShellShield leverages the `shell-quote` library to accurately tokenize incoming Bash commands. Unlike simple regex-based blockers, ShellShield understands command positions, operators, and environment variables, providing a professional-grade security layer.
 
-1. Parses JSON input from OpenCode (stdin)
-2. Uses `shell-quote` to parse the command into tokens, accurately identifying command positions.
-3. Recursively checks subshells (`sh -c`, etc.) up to 5 levels deep.
-4. Tracks variable assignments (e.g., `CMD=rm; $CMD file`) to prevent bypasses.
-5. Checks for destructive patterns in command positions.
-6. Returns exit code 2 with a helpful suggestion if blocked.
-7. Returns exit code 0 to allow the command.
+---
+*Originally inspired by the claude-rm-rf project by Zach Caceres.*
