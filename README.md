@@ -58,6 +58,8 @@ curl -fsSL https://bun.sh/install | bash
 curl -fsSL https://hevlyo.github.io/ShellShield/install.sh | bash
 ```
 
+This installs ShellShield into `~/.shellshield` and wires your shell profile automatically.
+
 
 This automatically adds the hook to your shell profile (`~/.zshrc` or `~/.bashrc`).
 
