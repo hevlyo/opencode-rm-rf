@@ -53,14 +53,22 @@ ShellShield is a high-performance, intelligent shell hook that guards your gate.
 curl -fsSL https://bun.sh/install | bash
 ```
 
-### 2. Install ShellShield Standalone
-Works with **Zsh** and **Bash**. Just add this to your `.zshrc` or `.bashrc`:
+### 2. One‑command install (recommended)
 ```bash
-# Add to your shell profile
+curl -fsSL https://hevlyo.github.io/ShellShield/install.sh | bash
+```
+
+
+This automatically adds the hook to your shell profile (`~/.zshrc` or `~/.bashrc`).
+
+### 3. Manual `--init` (optional)
+Run ShellShield with `--init` to print the hook, then paste it into your shell profile:
+
+```bash
 eval "$(bun run /path/to/shellshield/src/index.ts --init)"
 ```
 
-### 3. OpenCode Integration
+### 4. OpenCode Integration (Optional)
 Add as a `PreToolUse` hook in your `.opencode/settings.json`:
 ```json
 {
@@ -82,9 +90,9 @@ Add as a `PreToolUse` hook in your `.opencode/settings.json`:
 
 ---
 
-## ⚙️ Configuration (Governance as Code)
+## ⚙️ Configuration (Optional)
 
-Customize your shield with a `.shellshield.json` file in your home or project directory:
+ShellShield works out of the box with full protection. The `.shellshield.json` file is **optional** and only needed for customization (home or project directory):
 
 ```json
 {
