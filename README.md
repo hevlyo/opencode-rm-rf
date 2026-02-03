@@ -8,6 +8,9 @@ ShellShield is a high-performance OpenCode hook that blocks destructive commands
 
 ## ✨ Features
 
+-   🛡️ **Homograph Attack Protection**: Detects and blocks visually similar malicious domains (e.g., Cyrillic 'i' replacing Latin 'i') used in `curl` or `wget`.
+-   💉 **Terminal Injection Defense**: Intercepts ANSI escape sequences and hidden zero-width characters that can manipulate terminal display or hide malicious code.
+-   🔗 **Pipe-to-Shell Guard**: Flags dangerous `curl | bash` or `wget | sh` patterns, encouraging safe download-and-review workflows.
 -   🛡️ **Critical Path Protection**: Automatically blocks deletion of system directories like `/etc`, `/usr`, and project-critical folders like `.git`.
 -   **Commit First, Delete Later**: Blocks deletion of files with uncommitted Git changes to prevent data loss.
 -   🚀 **Volume Threshold Protection**: Intercepts commands targeting a large number of files (default > 50) to prevent globbing accidents.

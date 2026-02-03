@@ -16,7 +16,72 @@ const SHELL_COMMANDS = new Set(["sh", "bash", "zsh", "dash"]);
 const CRITICAL_PATHS = new Set([
     "/", "/etc", "/usr", "/var", "/bin", "/sbin", "/lib", "/boot", "/root", "/dev", "/proc", "/sys"
 ]);
+const SENSITIVE_PATTERNS = [
+    /\/\.ssh\//,
+    /\/\.bashrc$/,
+    /\/\.zshrc$/,
+    /\/\.profile$/,
+    /\/\.gitconfig$/
+];
 const VOLUME_THRESHOLD = parseInt(process.env.SHELLSHIELD_THRESHOLD || "50", 10);
+
+function isCriticalPath(path: string): boolean {
+    if (path === "/") return true;
+    const normalized = path.replace(/\/+$/, "");
+    if (CRITICAL_PATHS.has(normalized)) return true;
+    if (normalized === ".git" || normalized.endsWith("/.git")) return true;
+    return false;
+}
+
+function isSensitivePath(path: string): boolean {
+    const normalized = path.replace(/\/+$/, "");
+    let fullPath = normalized;
+    if (normalized.startsWith("~")) {
+        const home = homedir();
+        fullPath = normalized.replace("~", home);
+    }
+    for (const pattern of SENSITIVE_PATTERNS) {
+        if (pattern.test(fullPath)) return true;
+    }
+    return false;
+}
+
+function hasHomograph(str: string): { detected: boolean; char?: string } {
+    for (const char of str) {
+        const code = char.charCodeAt(0);
+        const isHidden = /[\u200B-\u200D\uFEFF]/.test(char);
+        if (code > 127 && !isHidden) {
+            return { detected: true, char };
+        }
+    }
+    return { detected: false };
+}
+
+function hasTerminalInjection(str: string): boolean {
+    const injectionPatterns = [
+        /\x1b\[/, 
+        /\u200B/, 
+        /\u200C/, 
+        /\u200D/, 
+        /\uFEFF/  
+    ];
+    return injectionPatterns.some(p => p.test(str));
+}
+
+interface TerminalInjectionResult {
+    detected: boolean;
+    reason?: string;
+}
+
+function checkTerminalInjection(str: string): TerminalInjectionResult {
+    if (/\x1b\[/.test(str)) {
+        return { detected: true, reason: "TERMINAL INJECTION DETECTED" };
+    }
+    if (/[\u200B-\u200D\uFEFF]/.test(str)) {
+        return { detected: true, reason: "HIDDEN CHARACTERS DETECTED" };
+    }
+    return { detected: false };
+}
 
 function getConfiguration() {
     const blocked = new Set(DEFAULT_BLOCKED);
@@ -37,14 +102,6 @@ interface BlockResult {
   blocked: boolean;
   reason?: string;
   suggestion?: string;
-}
-
-function isCriticalPath(path: string): boolean {
-    if (path === "/") return true;
-    const normalized = path.replace(/\/+$/, "");
-    if (CRITICAL_PATHS.has(normalized)) return true;
-    if (normalized === ".git" || normalized.endsWith("/.git")) return true;
-    return false;
 }
 
 function hasUncommittedChanges(files: string[]): string[] {
@@ -87,6 +144,15 @@ function logAudit(command: string, result: BlockResult) {
 function checkDestructive(command: string, depth = 0): BlockResult {
   if (depth > 5) return { blocked: false };
 
+  const homographRaw = hasHomograph(command);
+  if (homographRaw.detected) {
+      return { blocked: true, reason: "HOMOGRAPH ATTACK DETECTED", suggestion: `Suspicious character found: ${homographRaw.char}. This may be a visually similar domain masking a malicious source.` };
+  }
+  const injection = checkTerminalInjection(command);
+  if (injection.detected) {
+      return { blocked: true, reason: injection.reason!, suggestion: "Command contains ANSI escape sequences or hidden characters that can manipulate terminal output." };
+  }
+
   const { blocked: configBlocked, allowed: configAllowed } = getConfiguration();
   const vars: Record<string, string> = {};
   
@@ -101,6 +167,14 @@ function checkDestructive(command: string, depth = 0): BlockResult {
 
     if (typeof entry !== "string") {
         if (typeof entry === "object" && "op" in entry) {
+            if (entry.op === "<(") {
+                 if (i + 1 < entries.length) {
+                     const next = entries[i + 1];
+                     if (typeof next === "string" && (next === "curl" || next === "wget")) {
+                         return { blocked: true, reason: "PROCESS SUBSTITUTION DETECTED", suggestion: "Executing remote scripts via process substitution is dangerous." };
+                     }
+                 }
+            }
             nextMustBeCommand = true;
         }
         continue;
@@ -111,6 +185,13 @@ function checkDestructive(command: string, depth = 0): BlockResult {
             const [key, ...valParts] = entry.split("=");
             if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
                 vars[key] = valParts.join("=");
+            }
+        }
+        
+        if ((entry === "-o" || entry === "-O" || entry === "--output") && i + 1 < entries.length) {
+            const outputPath = entries[i + 1];
+            if (typeof outputPath === "string" && isSensitivePath(outputPath)) {
+                return { blocked: true, reason: "SENSITIVE PATH TARGETED", suggestion: `Command is attempting to write directly to a critical configuration file: ${outputPath}` };
             }
         }
         continue;
@@ -128,6 +209,24 @@ function checkDestructive(command: string, depth = 0): BlockResult {
     }
 
     const normalizedEntry = entry.toLowerCase();
+
+    if (normalizedEntry === "curl" || normalizedEntry === "wget") {
+        const remaining = entries.slice(i + 1);
+        const pipeIdx = remaining.findIndex(e => typeof e === "object" && "op" in e && e.op === "|");
+        if (pipeIdx !== -1) {
+            const nextPart = remaining[pipeIdx + 1];
+            if (typeof nextPart === "string" && SHELL_COMMANDS.has(nextPart.split("/").pop()?.toLowerCase() ?? "")) {
+                return { blocked: true, reason: "PIPE-TO-SHELL DETECTED", suggestion: "Executing remote scripts directly via pipe is dangerous. Download and review the script first." };
+            }
+        }
+    }
+
+    if (normalizedEntry === "bash" || normalizedEntry === "sh" || normalizedEntry === "zsh") {
+        const remaining = entries.slice(i + 1);
+        if (remaining.some(e => typeof e === "string" && (e.includes("<(curl") || e.includes("<(wget") || e.includes("< <(curl") || e.includes("< <(wget")))) {
+             return { blocked: true, reason: "PROCESS SUBSTITUTION DETECTED", suggestion: "Executing remote scripts via process substitution is dangerous." };
+        }
+    }
 
     if (["sudo", "xargs", "command", "env"].includes(normalizedEntry)) {
       nextMustBeCommand = true;
