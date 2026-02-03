@@ -51,6 +51,7 @@ export function checkDestructive(
     tokens: [], // Empty initially
     config,
     depth,
+    recursiveCheck: (cmd, d) => checkDestructive(cmd, d, config),
   };
 
   for (const rule of rules) {
@@ -78,7 +79,8 @@ export function checkDestructive(
     command,
     tokens,
     config,
-    depth
+    depth,
+    recursiveCheck: (cmd, d) => checkDestructive(cmd, d, config),
   };
 
   for (const rule of rules) {

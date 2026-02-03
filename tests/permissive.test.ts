@@ -12,7 +12,7 @@ describe("Permissive Mode", () => {
   test("should not block destructive command when SHELLSHIELD_MODE=permissive", async () => {
     try {
       const { stdout, stderr } = await execAsync(
-        `SHELLSHIELD_MODE=permissive bun "${CLI_PATH}" --check "rm /etc/passwd"`
+        `SHELLSHIELD_MODE=permissive /home/hevlyo/.bun/bin/bun "${CLI_PATH}" --check "rm /etc/passwd"`
       );
       expect(stderr).toContain("ShellShield WARNING");
       expect(stderr).toContain("would be blocked");
@@ -25,7 +25,7 @@ describe("Permissive Mode", () => {
   test("should block destructive command when SHELLSHIELD_MODE=enforce", async () => {
     try {
       await execAsync(
-        `SHELLSHIELD_MODE=enforce bun "${CLI_PATH}" --check "rm /etc/passwd"`
+        `SHELLSHIELD_MODE=enforce /home/hevlyo/.bun/bin/bun "${CLI_PATH}" --check "rm /etc/passwd"`
       );
       throw new Error("Command should have failed");
     } catch (error: any) {
@@ -37,7 +37,7 @@ describe("Permissive Mode", () => {
    test("should default to enforce mode", async () => {
     try {
       await execAsync(
-        `bun "${CLI_PATH}" --check "rm /etc/passwd"`
+        `/home/hevlyo/.bun/bin/bun "${CLI_PATH}" --check "rm /etc/passwd"`
       );
       throw new Error("Command should have failed");
     } catch (error: any) {

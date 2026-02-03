@@ -30,7 +30,7 @@ async function runHook(
   const input = JSON.stringify({ tool_input: { command } });
 
   const proc = spawn({
-    cmd: ["bun", "run", HOOK_PATH],
+    cmd: ["/home/hevlyo/.bun/bin/bun", "run", HOOK_PATH],
     stdin: "pipe",
     stderr: "pipe",
     stdout: "pipe",
@@ -231,7 +231,7 @@ describe("Edge cases", () => {
 
   test("invalid JSON input exits 0", async () => {
     const proc = spawn({
-      cmd: ["bun", "run", HOOK_PATH],
+      cmd: ["/home/hevlyo/.bun/bin/bun", "run", HOOK_PATH],
       stdin: "pipe",
       stderr: "pipe",
       stdout: "pipe",

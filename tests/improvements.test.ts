@@ -25,15 +25,17 @@ async function readStream(stream?: ReadableStream<Uint8Array> | null): Promise<s
 }
 
 async function runHook(
-  command: string
+  command: string,
+  env: Record<string, string> = {}
 ): Promise<{ exitCode: number; stderr: string }> {
   const input = JSON.stringify({ tool_input: { command } });
 
   const proc = spawn({
-    cmd: ["bun", "run", HOOK_PATH],
+    cmd: ["/home/hevlyo/.bun/bin/bun", "run", HOOK_PATH],
     stdin: "pipe",
     stderr: "pipe",
     stdout: "pipe",
+    env: { ...process.env, ...env },
   });
 
   if (proc.stdin) {
@@ -101,7 +103,7 @@ describe("Configuration", () => {
   test("allows custom blocked commands via env", async () => {
     const input = JSON.stringify({ tool_input: { command: "custom-delete file" } });
     const proc = spawn({
-      cmd: ["bun", "run", HOOK_PATH],
+      cmd: ["/home/hevlyo/.bun/bin/bun", "run", HOOK_PATH],
       stdin: "pipe",
       stderr: "pipe",
       stdout: "pipe",
@@ -118,7 +120,7 @@ describe("Configuration", () => {
   test("allows custom allowed commands via env", async () => {
     const input = JSON.stringify({ tool_input: { command: "rm safe-file" } });
     const proc = spawn({
-      cmd: ["bun", "run", HOOK_PATH],
+      cmd: ["/home/hevlyo/.bun/bin/bun", "run", HOOK_PATH],
       stdin: "pipe",
       stderr: "pipe",
       stdout: "pipe",

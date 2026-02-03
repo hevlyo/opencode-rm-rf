@@ -43,7 +43,7 @@ async function runHook(
   const input = JSON.stringify({ tool_input: { command } });
 
   const proc = spawn({
-    cmd: ["bun", "run", HOOK_PATH, ...args],
+    cmd: ["/home/hevlyo/.bun/bin/bun", "run", HOOK_PATH, ...args],
     stdin: "pipe",
     stderr: "pipe",
     stdout: "pipe",
@@ -123,7 +123,7 @@ describe("ShellShield v2.1 - Enhanced DX & Configuration", () => {
   describe("Standalone Mode", () => {
       test("supports --check flag for direct command validation", async () => {
           const proc = spawnSync({
-              cmd: ["bun", "run", HOOK_PATH, "--check", "rm -rf /"],
+              cmd: ["/home/hevlyo/.bun/bin/bun", "run", HOOK_PATH, "--check", "rm -rf /"],
               cwd: PROJECT_ROOT
           });
           expect(proc.exitCode).toBe(2);
@@ -132,7 +132,7 @@ describe("ShellShield v2.1 - Enhanced DX & Configuration", () => {
 
       test("supports --init flag for shell integration", async () => {
           const proc = spawnSync({
-              cmd: ["bun", "run", HOOK_PATH, "--init"],
+              cmd: ["/home/hevlyo/.bun/bin/bun", "run", HOOK_PATH, "--init"],
               env: { ...process.env, SHELL: "/bin/zsh" },
               cwd: PROJECT_ROOT
           });
@@ -142,7 +142,7 @@ describe("ShellShield v2.1 - Enhanced DX & Configuration", () => {
 
       test("supports raw command input via stdin (non-JSON)", async () => {
           const proc = spawn({
-              cmd: ["bun", "run", HOOK_PATH],
+              cmd: ["/home/hevlyo/.bun/bin/bun", "run", HOOK_PATH],
               stdin: "pipe",
               cwd: PROJECT_ROOT
           });

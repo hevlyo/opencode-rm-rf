@@ -13,6 +13,11 @@ export interface RuleContext {
   config: Config;
   /** Current recursion depth for subshells (starts at 0) */
   depth: number;
+  /**
+   * Recursive analysis function for subshells.
+   * This allows rules to trigger analysis of nested commands without importing the analyzer directly.
+   */
+  recursiveCheck: (command: string, depth: number) => BlockResult;
 }
 
 /**

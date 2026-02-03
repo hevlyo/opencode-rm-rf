@@ -2,15 +2,10 @@ import { SecurityRule, RuleContext } from "./interface";
 import { BlockResult } from "../../types";
 import { isOperator, ParsedEntry } from "../types";
 import { checkPipeToShell } from "../pipe-checks";
-import { checkDownloadAndExec } from "../analyzer"; // Circular dependency? Need to move logic or refactor
 import { checkBlockedCommand, checkFindCommand } from "../command-checks";
 import { checkSubshellCommand } from "../subshell";
-import { checkDestructive } from "../analyzer"; // Recursion needs careful handling
 import { SHELL_COMMANDS } from "../../constants";
 import { isSensitivePath } from "../../security/paths";
-
-// We need to move checkDownloadAndExec out of analyzer.ts to avoid circular deps
-// or duplicate it here. Since I am refactoring analyzer.ts anyway, I will move it to a helper.
 
 /**
  * Rule: Core AST Analysis
@@ -25,7 +20,7 @@ export class CoreAstRule implements SecurityRule {
   readonly name = "CoreAstRule";
 
   check(context: RuleContext): BlockResult | null {
-    const { tokens, config, depth } = context;
+    const { tokens, config, depth, recursiveCheck } = context;
     const vars: Record<string, string> = {};
     let nextMustBeCommand = true;
 
@@ -158,11 +153,7 @@ export class CoreAstRule implements SecurityRule {
 
       if (SHELL_COMMANDS.has(resolvedCmd)) {
         const subshellResult = checkSubshellCommand(tokens, i + 1, (subshellCmd) => {
-          // Recursive call back to main analyzer
-          // Since we can't easily import checkDestructive due to cycles, 
-          // we might need to rely on the fact that subshell.ts calls the callback provided.
-          // In the real implementation, we pass checkDestructive bound or imported.
-          return checkDestructive(subshellCmd, depth + 1, config);
+          return recursiveCheck(subshellCmd, depth + 1);
         });
         if (subshellResult?.blocked) return subshellResult;
       }
