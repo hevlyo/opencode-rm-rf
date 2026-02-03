@@ -1,54 +1,101 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -e
 
-DEFAULT_DIR="$HOME/.shellshield"
-REPO_DIR=""
+# Cores
+RESET='\033[0m'
+BOLD='\033[1m'
+RED='\033[31m'
+GREEN='\033[32m'
+BLUE='\033[34m'
+CYAN='\033[36m'
 
-if [[ -n "${BASH_SOURCE[0]-}" && -f "${BASH_SOURCE[0]}" ]]; then
-  REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-else
-  REPO_DIR="$DEFAULT_DIR"
-fi
-HOOK_CMD="eval \"\$(bun run \"${REPO_DIR}/src/index.ts\" --init)\""
-MARKER="# ShellShield"
+echo -e "${BLUE}${BOLD}"
+echo "🛡️  ShellShield Installer"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo -e "${RESET}"
 
-if ! command -v bun >/dev/null 2>&1; then
-  echo "Bun is required. Install with: curl -fsSL https://bun.sh/install | bash" >&2
-  exit 1
-fi
+# 1. Verificar Dependências
+echo -e "${CYAN}🔍 Checking requirements...${RESET}"
 
 if ! command -v git >/dev/null 2>&1; then
-  echo "Git is required. Install git and retry." >&2
+  echo -e "${RED}❌ Git is required.${RESET}"
+  echo "Please install git and try again."
   exit 1
 fi
 
-if [[ ! -d "$REPO_DIR/.git" ]]; then
-  mkdir -p "$REPO_DIR"
-  git clone https://github.com/hevlyo/ShellShield.git "$REPO_DIR" >/dev/null 2>&1
+if ! command -v bun >/dev/null 2>&1; then
+  echo -e "${RED}❌ Bun is required.${RESET}"
+  echo "Please install bun: curl -fsSL https://bun.sh/install | bash"
+  exit 1
+fi
+
+echo -e "${GREEN}✅ Dependencies found.${RESET}"
+
+# 2. Clone/Update Repo
+INSTALL_DIR="$HOME/.shellshield"
+echo -e "\n${CYAN}📦 Installing to ${INSTALL_DIR}...${RESET}"
+
+if [ -d "$INSTALL_DIR/.git" ]; then
+  echo "Updating existing installation..."
+  git -C "$INSTALL_DIR" fetch --quiet
+  git -C "$INSTALL_DIR" reset --hard origin/main --quiet
 else
-  git -C "$REPO_DIR" pull --ff-only >/dev/null 2>&1 || true
+  git clone --depth 1 https://github.com/hevlyo/ShellShield.git "$INSTALL_DIR" --quiet
 fi
 
-if [[ -n "${ZSH_VERSION-}" ]]; then
-  PROFILE="$HOME/.zshrc"
-elif [[ -n "${BASH_VERSION-}" ]]; then
-  PROFILE="$HOME/.bashrc"
+# Instalar dependências do projeto
+echo "Installing project dependencies..."
+cd "$INSTALL_DIR"
+bun install --production --silent
+
+echo -e "${GREEN}✅ Installed successfully.${RESET}"
+
+# 3. Configurar Shell
+echo -e "\n${CYAN}🔌 Configuring shell integration...${RESET}"
+
+# Detecta o shell do usuário (não o do script de instalação)
+USER_SHELL=$(basename "$SHELL")
+PROFILE=""
+
+case "$USER_SHELL" in
+  zsh)
+    PROFILE="$HOME/.zshrc"
+    ;;
+  bash)
+    # Preferência: .bashrc > .bash_profile
+    if [ -f "$HOME/.bashrc" ]; then
+      PROFILE="$HOME/.bashrc"
+    else
+      PROFILE="$HOME/.bash_profile"
+    fi
+    ;;
+  *)
+    echo -e "${RED}⚠️  Unsupported shell detected: $USER_SHELL${RESET}"
+    echo "Please manually add the hook to your shell configuration."
+    PROFILE="$HOME/.profile"
+    ;;
+esac
+
+HOOK_SCRIPT='
+# ShellShield Hook
+if [ -f "$HOME/.shellshield/src/index.ts" ]; then
+  eval "$(bun run "$HOME/.shellshield/src/index.ts" --init)"
+fi
+'
+
+if [ -f "$PROFILE" ]; then
+  if grep -q "ShellShield Hook" "$PROFILE"; then
+    echo -e "Hook already present in ${BOLD}$PROFILE${RESET}"
+  else
+    echo "$HOOK_SCRIPT" >> "$PROFILE"
+    echo -e "Hook added to ${BOLD}$PROFILE${RESET}"
+  fi
 else
-  PROFILE="$HOME/.profile"
+  echo -e "${RED}⚠️  Could not find shell profile ($PROFILE).${RESET}"
+  echo "Add this manually to your config:"
+  echo "$HOOK_SCRIPT"
 fi
 
-touch "$PROFILE"
+echo -e "\n${GREEN}${BOLD}🎉 Done! Restart your shell to activate ShellShield.${RESET}"
+echo -e "Try running: ${BOLD}rm -rf /${RESET} (it will be blocked)"
 
-if grep -Fq "$MARKER" "$PROFILE"; then
-  echo "ShellShield hook already present in $PROFILE"
-  exit 0
-fi
-
-{
-  echo ""
-  echo "$MARKER"
-  echo "$HOOK_CMD"
-} >> "$PROFILE"
-
-echo "ShellShield installed. Restart your shell or run:"
-echo "  source \"$PROFILE\""
