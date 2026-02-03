@@ -1,64 +1,64 @@
 # 🛡️ ShellShield
 
-**The ultimate safety shield for your terminal.**
+<p align="center">
+  <strong>The ultimate safety shield for your terminal. Stop accidental destruction, before it happens.</strong>
+</p>
 
-ShellShield is a high-performance OpenCode hook that blocks destructive commands, protects critical system paths, and ensures your Git workflow remains safe. It's the governance layer your terminal deserves.
+<p align="center">
+  <img src="https://img.shields.io/badge/Bun-1.0+-black?style=for-the-badge&logo=bun" alt="Bun">
+  <img src="https://img.shields.io/badge/Security-Hardened-red?style=for-the-badge" alt="Security Hardened">
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License MIT">
+</p>
 
-> **Note:** ShellShield provides robust protection but is not a substitute for regular backups. Use it as your first line of defense.
+---
 
-## ✨ Features
+## 🧐 Why ShellShield?
 
--   🌐 **Standalone Mode**: Use ShellShield in any terminal (Zsh/Bash) with easy integration hooks.
--   🛡️ **Homograph Attack Protection**: Detects and blocks visually similar malicious domains (e.g., Cyrillic 'i' replacing Latin 'i') used in `curl` or `wget`.
--   💉 **Terminal Injection Defense**: Intercepts ANSI escape sequences and hidden zero-width characters that can manipulate terminal display or hide malicious code.
--   🔗 **Pipe-to-Shell Guard**: Flags dangerous `curl | bash` or `wget | sh` patterns, with a smart **Trusted Domains Allowlist** (allows GitHub, Docker, Rustup, etc. by default).
--   🔒 **Insecure Transport Block**: Blocks piping to shell when using plain HTTP or when certificate validation is disabled (`-k`, `--insecure`).
--   🕵️ **Credential Exposure Detection**: Automatically flags URLs containing sensitive credentials (e.g., `https://user:password@host`).
--   🛡️ **Critical Path Protection**: Automatically blocks deletion of system directories like `/etc`, `/usr`, and project-critical folders like `.git`. Supports Linux, macOS, and Windows.
--   **Commit First, Delete Later**: Blocks deletion of files with uncommitted Git changes to prevent data loss.
--   🚀 **Volume Threshold Protection**: Intercepts commands targeting a large number of files (default > 50) to prevent globbing accidents.
--   📜 **Security Audit Log**: Keeps a JSON-formatted log of all intercepted actions in `~/.shellshield/audit.log`.
--   🧠 **Recursive Subshell Analysis**: Dives deep into nested subshells (`sh -c "bash -c '...' "`) to find hidden threats.
--   **Variable Expansion Tracking**: Detects bypass attempts using variables like `CMD=rm; $CMD file`.
+We've all been there. A misplaced space in `rm -rf / tmp/`, a copy-paste from a malicious site, or a `curl | bash` that looked safe but used a **Cyrillic 'і'** instead of a Latin 'i'. 
 
-## ⚙️ Configuration
+**Your browser catches these attacks. Your terminal doesn't. ShellShield does.**
 
-ShellShield can be configured via environment variables or a `.shellshield.json` file in your project or home directory.
+ShellShield is a high-performance, intelligent shell hook that guards your gate. It tokenizes every command using a real shell parser to intercept destructive actions, homograph attacks, and terminal injections before they execute.
 
-### .shellshield.json
+---
 
-```json
-{
-  "blocked": ["rm", "shred", "custom-command"],
-  "allowed": ["ls", "cat"],
-  "trustedDomains": ["my-company.com", "github.com"],
-  "threshold": 100
-}
+## ✨ Features that Make You Unstoppable
+
+### 🛡️ Intelligent Destruction Blocking
+-   **Context-Aware**: Uses `shell-quote` to understand if `rm` is a command or just a string in `grep`.
+-   **Recursive Analysis**: Dives deep into subshells (`sh -c "..."`) up to 5 levels.
+-   **Smart Suggestions**: Blocks `rm -rf folder/` and suggests `trash folder/` automatically.
+
+### 🔐 Advanced Security Guard
+-   **Homograph Defense**: Blocks visually identical malicious domains (e.g., `іnstall.com` vs `install.com`).
+-   **Injection Protection**: Intercepts ANSI escapes and hidden zero-width characters that manipulate your terminal output.
+-   **Safe Pipe-to-Shell**: Flags dangerous `curl | bash` patterns, while allowing trusted domains (GitHub, Docker, etc.).
+-   **Credential Guard**: Detects and blocks commands containing plain-text passwords in URLs.
+
+### 🚜 Terminal Governance
+-   **Critical Path Protection**: Blocks deletion of `/etc`, `/usr`, `C:\Windows`, and even `.git` folders.
+-   **Git Workflow Safety**: Prevents deleting files with uncommitted changes.
+-   **Volume Threshold**: Intercepts accidental globs that target hundreds of files at once.
+-   **Security Audit Log**: Keeps a JSON trace of every blocked action in `~/.shellshield/audit.log`.
+
+---
+
+## 🚀 Quick Start
+
+### 1. Install Bun
+```bash
+curl -fsSL https://bun.sh/install | bash
 ```
 
-### Environment Variables
+### 2. Install ShellShield Standalone
+Works with **Zsh** and **Bash**. Just add this to your `.zshrc` or `.bashrc`:
+```bash
+# Add to your shell profile
+eval "$(bun run /path/to/shellshield/src/index.ts --init)"
+```
 
-- `OPENCODE_BLOCK_COMMANDS`: Comma-separated list of additional commands to block.
-- `OPENCODE_ALLOW_COMMANDS`: Comma-separated list of commands to explicitly allow.
-- `SHELLSHIELD_THRESHOLD`: Number of files allowed in a single command before blocking (default: 50).
-- `SHELLSHIELD_SKIP`: Set to `1` to temporarily bypass checks (e.g., `SHELLSHIELD_SKIP=1 rm -rf /tmp/test`).
-
-## 🚀 Installation
-
-### General Shell Integration (Standalone)
-
-Add ShellShield to your terminal regardless of OpenCode:
-
-1.  **Install Bun**: `curl -fsSL https://bun.sh/install | bash`
-2.  **Add to shell profile** (`.zshrc` or `.bashrc`):
-    ```bash
-    eval "$(bun run /path/to/shellshield/src/index.ts --init)"
-    ```
-
-### OpenCode Hook Integration
-
-Example in `.opencode/settings.json`:
-
+### 3. OpenCode Integration
+Add as a `PreToolUse` hook in your `.opencode/settings.json`:
 ```json
 {
   "hooks": {
@@ -77,16 +77,39 @@ Example in `.opencode/settings.json`:
 }
 ```
 
-## 🛠️ Development
+---
+
+## ⚙️ Configuration (Governance as Code)
+
+Customize your shield with a `.shellshield.json` file in your home or project directory:
+
+```json
+{
+  "blocked": ["rm", "shred", "custom-killer"],
+  "allowed": ["ls", "cat"],
+  "trustedDomains": ["my-company.com", "github.com"],
+  "threshold": 100
+}
+```
+
+### Environment Variables
+- `SHELLSHIELD_THRESHOLD`: Max files per delete (Default: 50).
+- `SHELLSHIELD_SKIP=1`: Temporarily bypass all checks for the next command.
+
+---
+
+## 🛠️ Development & Testing
+
+ShellShield is built with **TDD (Test-Driven Development)**. We have **71+ test cases** covering bypasses, security threats, and edge cases.
 
 ```bash
-# Run the full test suite (71 test cases)
 bun test
 ```
 
-## 🧠 How It Works
+---
 
-ShellShield leverages the `shell-quote` library to accurately tokenize incoming Bash commands. Unlike simple regex-based blockers, ShellShield understands command positions, operators, and environment variables, providing a professional-grade security layer.
+## 🤝 Credits & Inspiration
+Originally inspired by the [claude-rm-rf](https://github.com/zcaceres/claude-rm-rf) project by Zach Caceres. Evolved into a complete security suite.
 
 ---
-*Originally inspired by the claude-rm-rf project by Zach Caceres.*
+<p align="center">🛡️ Built for those who roll the boulder every day. Ship safe.</p>
