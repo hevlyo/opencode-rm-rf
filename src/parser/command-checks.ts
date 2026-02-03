@@ -24,6 +24,18 @@ export function checkBlockedCommand(
     return null;
   }
 
+  if (resolvedCmd === "mv" || resolvedCmd === "cp") {
+    for (const arg of args) {
+      if (!arg.startsWith("-") && isCriticalPath(arg)) {
+        return {
+          blocked: true,
+          reason: "CRITICAL PATH TARGETED",
+          suggestion: `Modifying critical system path ${arg} is prohibited.`,
+        };
+      }
+    }
+  }
+
   if (!context.blocked.has(resolvedCmd)) return null;
 
   for (const arg of args) {

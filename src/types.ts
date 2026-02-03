@@ -9,6 +9,8 @@ export interface Config {
   allowed: Set<string>;
   trustedDomains: string[];
   threshold: number;
+  mode: "enforce" | "permissive";
+  customRules?: Array<{ pattern: string; suggestion: string }>;
 }
 
 export interface TerminalInjectionResult {

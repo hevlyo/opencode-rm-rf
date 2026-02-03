@@ -1,20 +1,40 @@
 import { existsSync, readFileSync } from "fs";
 import { join, dirname } from "path";
 import { homedir } from "os";
+import { z } from "zod";
 import { Config } from "./types";
 import { DEFAULT_BLOCKED, DEFAULT_TRUSTED_DOMAINS } from "./constants";
 
-interface FileConfig {
-  blocked?: string[];
-  allowed?: string[];
-  trustedDomains?: string[];
-  threshold?: number;
-}
+const ConfigSchema = z.object({
+  blocked: z.array(z.string()).optional(),
+  allowed: z.array(z.string()).optional(),
+  trustedDomains: z.array(z.string()).optional(),
+  threshold: z.number().int().positive().optional(),
+  mode: z.enum(["enforce", "permissive", "interactive"]).optional(),
+  customRules: z
+    .array(
+      z.object({
+        pattern: z.string(),
+        suggestion: z.string(),
+      })
+    )
+    .optional(),
+});
+
+type FileConfig = z.infer<typeof ConfigSchema>;
 
 function readConfigFile(path: string): FileConfig | null {
   if (!existsSync(path)) return null;
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as FileConfig;
+    const raw = JSON.parse(readFileSync(path, "utf8"));
+    const parsed = ConfigSchema.safeParse(raw);
+    if (!parsed.success) {
+      if (process.env.DEBUG) {
+        console.warn(`[ShellShield] Invalid config at ${path}:`, parsed.error);
+      }
+      return null;
+    }
+    return parsed.data;
   } catch {
     return null;
   }
@@ -48,6 +68,8 @@ function loadConfigFile(): Partial<Config> {
   const allowedSource = localConfig?.allowed ?? homeConfig?.allowed;
   const trustedDomains = localConfig?.trustedDomains ?? homeConfig?.trustedDomains;
   const threshold = localConfig?.threshold ?? homeConfig?.threshold;
+  const mode = localConfig?.mode ?? homeConfig?.mode;
+  const customRules = localConfig?.customRules ?? homeConfig?.customRules;
 
   return {
     blocked: blockedSource
@@ -58,6 +80,8 @@ function loadConfigFile(): Partial<Config> {
       : undefined,
     trustedDomains,
     threshold,
+    mode,
+    customRules,
   };
 }
 
@@ -68,6 +92,11 @@ export function getConfiguration(): Config {
   const trustedDomains = fileConfig.trustedDomains || DEFAULT_TRUSTED_DOMAINS;
   const threshold =
     fileConfig.threshold || parseInt(process.env.SHELLSHIELD_THRESHOLD || "50", 10);
+  const mode =
+    fileConfig.mode ||
+    (process.env.SHELLSHIELD_MODE as "enforce" | "permissive" | "interactive") ||
+    "enforce";
+  const customRules = fileConfig.customRules || [];
 
   if (process.env.OPENCODE_BLOCK_COMMANDS) {
     process.env.OPENCODE_BLOCK_COMMANDS.split(",").forEach((cmd) =>
@@ -81,5 +110,5 @@ export function getConfiguration(): Config {
     );
   }
 
-  return { blocked, allowed, trustedDomains, threshold };
+  return { blocked, allowed, trustedDomains, threshold, mode, customRules };
 }

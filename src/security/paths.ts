@@ -15,6 +15,13 @@ export function isCriticalPath(path: string): boolean {
     return true;
   }
 
+  for (const critical of CRITICAL_PATHS) {
+    if (critical === "/" || critical === "c:") continue;
+    if (normalized.startsWith(critical + "/") || normalized.startsWith(critical + "\\")) {
+      return true;
+    }
+  }
+
   if (normalized === ".git" || normalized.endsWith("/.git") || normalized.endsWith(".git")) {
     return true;
   }

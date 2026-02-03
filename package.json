@@ -20,6 +20,7 @@
     "@types/shell-quote": "^1.7.5"
   },
   "dependencies": {
-    "shell-quote": "^1.8.3"
+    "shell-quote": "^1.8.3",
+    "zod": "^4.3.6"
   }
 }

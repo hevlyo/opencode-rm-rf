@@ -14,7 +14,9 @@ interface AnalysisContext {
   allowed: Set<string>;
   trustedDomains: string[];
   threshold: number;
+  customRules?: Array<{ pattern: string; suggestion: string }>;
 }
+
 
 function checkRawThreatPatterns(command: string): BlockResult | null {
   const subshellMatches = command.match(/\b(?:sh|bash|zsh)\s+-c\b/gi) || [];
@@ -38,12 +40,12 @@ function checkRawThreatPatterns(command: string): BlockResult | null {
       suggestion: "Avoid eval with remote content. Download and review the script first.",
     },
     {
-      pattern: /(?:sh|bash|zsh)\s+-c\s+["']?\$\((curl|wget)\b/i,
+      pattern: /(?:sh|bash|zsh|dash|python\d*|perl|ruby|node|bun|php)\s+(?:-c|-e)\s+["']?\$\((curl|wget)\b/i,
       reason: "COMMAND SUBSTITUTION DETECTED",
       suggestion: "Executing remote scripts via command substitution is dangerous.",
     },
     {
-      pattern: /(?:sh|bash|zsh)\s+-c\s+["']?`(curl|wget)\b/i,
+      pattern: /(?:sh|bash|zsh|dash|python\d*|perl|ruby|node|bun|php)\s+(?:-c|-e)\s+["']?`(curl|wget)\b/i,
       reason: "COMMAND SUBSTITUTION DETECTED",
       suggestion: "Executing remote scripts via command substitution is dangerous.",
     },
@@ -132,6 +134,24 @@ export function checkDestructive(
   if (rawThreatCheck) return rawThreatCheck;
 
   const activeContext = context ?? getConfiguration();
+  
+  if (activeContext.customRules) {
+    for (const rule of activeContext.customRules) {
+      try {
+        const regex = new RegExp(rule.pattern);
+        if (regex.test(command)) {
+          return {
+            blocked: true,
+            reason: "CUSTOM RULE VIOLATION",
+            suggestion: rule.suggestion,
+          };
+        }
+      } catch (e) {
+        if (process.env.DEBUG) console.error("Invalid custom rule regex:", rule.pattern);
+      }
+    }
+  }
+
   const vars: Record<string, string> = {};
 
   let entries: ParsedEntry[] = [];
