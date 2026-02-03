@@ -39,6 +39,10 @@ if [ -d "$INSTALL_DIR/.git" ]; then
   echo "Updating existing installation..."
   git -C "$INSTALL_DIR" fetch --quiet
   git -C "$INSTALL_DIR" reset --hard origin/main --quiet
+elif [ -d "$INSTALL_DIR" ]; then
+  echo "Directory $INSTALL_DIR exists but is not a git repo. Backing up..."
+  mv "$INSTALL_DIR" "${INSTALL_DIR}.bak.$(date +%s)"
+  git clone --depth 1 https://github.com/hevlyo/ShellShield.git "$INSTALL_DIR" --quiet
 else
   git clone --depth 1 https://github.com/hevlyo/ShellShield.git "$INSTALL_DIR" --quiet
 fi
