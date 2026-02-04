@@ -137,4 +137,18 @@ describe("ShellShield - Advanced Security (Tirith-inspired)", () => {
       expect(result.reason).toContain("CREDENTIAL EXPOSURE");
     });
   });
+
+  describe("PowerShell Encoded Commands", () => {
+    test("blocks pwsh -EncodedCommand", () => {
+      const result = analyze("pwsh -EncodedCommand SQBFAFgAIA==");
+      expect(result.blocked).toBe(true);
+      expect(result.reason).toContain("ENCODED POWERSHELL");
+    });
+
+    test("blocks powershell -enc", () => {
+      const result = analyze("powershell -enc SQBFAFgAIA==");
+      expect(result.blocked).toBe(true);
+      expect(result.reason).toContain("ENCODED POWERSHELL");
+    });
+  });
 });

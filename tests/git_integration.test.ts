@@ -40,4 +40,30 @@ describe("Git integration", () => {
     expect(changed).toContain(fileA);
     expect(changed).not.toContain(fileB);
   });
+
+  test("handles ./pathspec mapping for relative files", () => {
+    const repoDir = mkdtempSync(join(tmpdir(), "shellshield-git-"));
+    runGit(repoDir, ["init"]);
+
+    const fileA = join(repoDir, "a.txt");
+    writeFileSync(fileA, "a1\n");
+    runGit(repoDir, ["add", "."]);
+    runGit(repoDir, ["commit", "-m", "init"]);
+
+    writeFileSync(fileA, "a2\n");
+
+    const originalCwd = process.cwd();
+    try {
+      process.chdir(repoDir);
+      const changed = hasUncommittedChanges(["./a.txt"]);
+      expect(changed).toContain("./a.txt");
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
+
+  test("returns empty list when files input is invalid", () => {
+    const changed = hasUncommittedChanges(null as unknown as string[]);
+    expect(changed).toEqual([]);
+  });
 });

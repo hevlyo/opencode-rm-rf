@@ -1,5 +1,13 @@
 export const DEFAULT_BLOCKED = new Set(["rm", "shred", "unlink", "wipe", "srm"]);
-export const SHELL_COMMANDS = new Set(["sh", "bash", "zsh", "dash"]);
+export const SHELL_COMMANDS = new Set([
+  "sh",
+  "bash",
+  "zsh",
+  "dash",
+  "fish",
+  "pwsh",
+  "powershell",
+]);
 export const CRITICAL_PATHS = new Set([
   "/",
   "/etc",

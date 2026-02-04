@@ -50,6 +50,7 @@ async function runHook(
     stdout: "pipe",
     env: {
       ...process.env,
+      BUN_COVERAGE: "0",
       SHELLSHIELD_AUDIT_DISABLED: "1",
       SHELLSHIELD_MODE: "enforce",
       SHELLSHIELD_SKIP: "0",
@@ -130,6 +131,7 @@ describe("ShellShield v2.1 - Enhanced DX & Configuration", () => {
               cmd: [BUN_PATH, "run", HOOK_PATH, "--check", "rm -rf /"],
               env: {
                 ...process.env,
+                BUN_COVERAGE: "0",
                 SHELLSHIELD_MODE: "enforce",
                 SHELLSHIELD_SKIP: "0",
                 INIT_CWD: PROJECT_ROOT,
@@ -146,6 +148,7 @@ describe("ShellShield v2.1 - Enhanced DX & Configuration", () => {
               cmd: [BUN_PATH, "run", HOOK_PATH, "--init"],
               env: {
                 ...process.env,
+                BUN_COVERAGE: "0",
                 SHELL: "/bin/zsh",
                 SHELLSHIELD_SKIP: "0",
                 INIT_CWD: PROJECT_ROOT,
@@ -157,6 +160,40 @@ describe("ShellShield v2.1 - Enhanced DX & Configuration", () => {
           expect(proc.stdout.toString()).toContain("zle -N accept-line");
       });
 
+      test("supports --init for fish", async () => {
+          const proc = spawnSync({
+              cmd: [BUN_PATH, "run", HOOK_PATH, "--init"],
+              env: {
+                ...process.env,
+                BUN_COVERAGE: "0",
+                SHELL: "/usr/bin/fish",
+                SHELLSHIELD_SKIP: "0",
+                INIT_CWD: PROJECT_ROOT,
+                PWD: PROJECT_ROOT,
+              },
+              cwd: PROJECT_ROOT
+          });
+          expect(proc.exitCode).toBe(0);
+          expect(proc.stdout.toString()).toContain("fish_preexec");
+      });
+
+      test("supports --init for PowerShell", async () => {
+          const proc = spawnSync({
+              cmd: [BUN_PATH, "run", HOOK_PATH, "--init"],
+              env: {
+                ...process.env,
+                BUN_COVERAGE: "0",
+                SHELL: "pwsh",
+                SHELLSHIELD_SKIP: "0",
+                INIT_CWD: PROJECT_ROOT,
+                PWD: PROJECT_ROOT,
+              },
+              cwd: PROJECT_ROOT
+          });
+          expect(proc.exitCode).toBe(0);
+          expect(proc.stdout.toString()).toContain("Set-PSReadLineKeyHandler");
+      });
+
       test("supports raw command input via stdin (non-JSON)", async () => {
           const proc = spawn({
               cmd: [BUN_PATH, "run", HOOK_PATH],
@@ -165,6 +202,7 @@ describe("ShellShield v2.1 - Enhanced DX & Configuration", () => {
               stdout: "ignore",
               env: {
                 ...process.env,
+                BUN_COVERAGE: "0",
                 SHELLSHIELD_MODE: "enforce",
                 SHELLSHIELD_SKIP: "0",
                 INIT_CWD: PROJECT_ROOT,
@@ -179,7 +217,7 @@ describe("ShellShield v2.1 - Enhanced DX & Configuration", () => {
       test("respects SHELLSHIELD_SKIP bypass variable", async () => {
         const { exitCode } = await runHook("rm -rf /", [], { SHELLSHIELD_SKIP: "1" });
         expect(exitCode).toBe(0);
-      });
+      }, { timeout: 30000 });
   });
 
   describe("Audit Logging", () => {

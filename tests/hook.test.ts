@@ -48,6 +48,7 @@ async function runHook(command: string): Promise<{ exitCode: number; stderr: str
     stdout: "ignore",
     env: {
       ...process.env,
+      BUN_COVERAGE: "0",
       SHELLSHIELD_AUDIT_DISABLED: "1",
       SHELLSHIELD_MODE: "enforce",
       SHELLSHIELD_SKIP: "0",

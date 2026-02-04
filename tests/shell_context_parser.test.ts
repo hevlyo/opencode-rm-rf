@@ -34,4 +34,14 @@ describe("shell context type output parsing", () => {
     const entry = parseTypeOutput("rm is hashed (/usr/bin/rm)");
     expect(entry.kind).toBe("file");
   });
+
+  test("parses builtin output", () => {
+    const entry = parseTypeOutput("cd is a shell builtin");
+    expect(entry.kind).toBe("builtin");
+  });
+
+  test("parses keyword output", () => {
+    const entry = parseTypeOutput("if is a shell keyword");
+    expect(entry.kind).toBe("keyword");
+  });
 });

@@ -30,7 +30,7 @@ async function runCheck(command: string, env: Record<string, string>) {
     stdin: "ignore",
     stderr: "pipe",
     stdout: "ignore",
-    env: { ...process.env, SHELLSHIELD_AUDIT_DISABLED: "1", ...env },
+    env: { ...process.env, BUN_COVERAGE: "0", SHELLSHIELD_AUDIT_DISABLED: "1", ...env },
     cwd: PROJECT_ROOT,
   });
   const exitCode = await proc.exited;

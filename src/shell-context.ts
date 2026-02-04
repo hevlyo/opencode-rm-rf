@@ -108,9 +108,7 @@ export function parseTypeOutput(output: string): ShellContextEntry {
   }
 
   // hashed path (zsh)
-  if (/\bis hashed\s*\(\//.test(first)) {
-    return { kind: "file", output: out };
-  }
+  if (/\bis hashed\s*\(\//.test(first)) return { kind: "file", output: out };
 
   return { kind: "unknown", output: out };
 }

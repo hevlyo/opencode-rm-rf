@@ -1,6 +1,6 @@
 import { checkDestructive } from "./src/parser/analyzer";
 
-const iterations = 1000;
+const iterations = 10000;
 const commands = [
   "ls -la",
   "rm -rf /etc/passwd",

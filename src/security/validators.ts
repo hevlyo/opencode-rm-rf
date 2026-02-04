@@ -94,3 +94,69 @@ export function isTrustedDomain(url: string, trustedDomains: string[]): boolean 
     return false;
   }
 }
+
+export interface UrlRiskScore {
+  url: string;
+  score: number;
+  reasons: string[];
+  trusted: boolean;
+}
+
+function isIpHost(hostname: string): boolean {
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) return true;
+  if (/^\[[0-9a-f:]+\]$/i.test(hostname)) return true;
+  return false;
+}
+
+export function scoreUrlRisk(url: string, trustedDomains: string[]): UrlRiskScore {
+  const reasons: string[] = [];
+  let score = 0;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { url, score: 100, reasons: ["INVALID_URL"], trusted: false };
+  }
+
+  const trusted = isTrustedDomain(url, trustedDomains);
+
+  if (parsed.protocol !== "https:") {
+    score += 30;
+    reasons.push("INSECURE_PROTOCOL");
+  }
+
+  if (parsed.username || parsed.password) {
+    score += 30;
+    reasons.push("CREDENTIALS_IN_URL");
+  }
+
+  if (parsed.hostname.includes("xn--")) {
+    score += 15;
+    reasons.push("PUNYCODE_DOMAIN");
+  }
+
+  if (isIpHost(parsed.hostname)) {
+    score += 20;
+    reasons.push("IP_ADDRESS_HOST");
+  }
+
+  const homograph = hasHomograph(url);
+  if (homograph.detected) {
+    score += 25;
+    reasons.push("HOMOGRAPH_MIXED_SCRIPTS");
+  }
+
+  if (!trusted) {
+    score += 10;
+    reasons.push("UNTRUSTED_DOMAIN");
+  }
+
+  if (url.length > 100) {
+    score += 10;
+    reasons.push("LONG_URL");
+  }
+
+  score = Math.min(100, score);
+  return { url, score, reasons, trusted };
+}

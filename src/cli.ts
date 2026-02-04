@@ -8,6 +8,7 @@ import { formatBlockedMessage } from "./ui/terminal";
 import { writeShellContextSnapshot, parseTypeOutput, ShellContextSnapshot } from "./shell-context";
 import { homedir } from "os";
 import { resolve } from "path";
+import { scoreUrlRisk } from "./security/validators";
 
 function runProbe(cmd: string[]): { ok: boolean; out: string } {
   try {
@@ -108,8 +109,12 @@ export async function main(): Promise<void> {
   }
 
   if (args.includes("--init")) {
-    const shell = process.env.SHELL?.split("/").pop() || "bash";
-    if (shell === "zsh") {
+    const shellPath = process.env.SHELL || "";
+    const fallbackShell =
+      !shellPath && (process.env.PSModulePath || process.env.ComSpec) ? "powershell" : "bash";
+    const shellNameRaw = shellPath.split(/[\\/]/).pop() || fallbackShell;
+    const shellName = shellNameRaw.replace(/\.exe$/i, "").toLowerCase();
+    if (shellName === "zsh") {
       console.log(`
 # ShellShield Zsh Integration
 _shellshield_accept_line() {
@@ -140,6 +145,84 @@ if [[ "$SHELLSHIELD_AUTO_SNAPSHOT" == "1" ]]; then
         fi
     fi
 fi
+
+# Optional: bracketed paste safety (zsh only)
+# Enable by setting: export SHELLSHIELD_PASTE_HOOK=1
+if [[ "$SHELLSHIELD_PASTE_HOOK" == "1" ]]; then
+    _shellshield_bracketed_paste() {
+        local before_left="$LBUFFER"
+        local before_right="$RBUFFER"
+        zle .bracketed-paste
+        local pasted="\${LBUFFER#$before_left}"
+        if [[ -n "$pasted" ]]; then
+            if command -v bun >/dev/null 2>&1; then
+                printf "%s" "$pasted" | bun run "${process.argv[1]}" --paste || {
+                    LBUFFER="$before_left"
+                    RBUFFER="$before_right"
+                    return 1
+                }
+            fi
+        fi
+    }
+    zle -N bracketed-paste _shellshield_bracketed_paste
+fi
+          `);
+    } else if (shellName === "fish") {
+      console.log(`
+# ShellShield Fish Integration
+function __shellshield_preexec --on-event fish_preexec
+    if test -n "$SHELLSHIELD_SKIP"
+        return
+    end
+    if type -q bun
+        set -l cmd $argv
+        if test (count $cmd) -gt 1
+            set -l cmd (string join " " -- $cmd)
+        end
+        if test -n "$cmd"
+            bun run "${process.argv[1]}" --check "$cmd"; or return $status
+        end
+    end
+end
+
+# Optional: auto-refresh alias/function context snapshot
+# Enable by setting: set -gx SHELLSHIELD_AUTO_SNAPSHOT 1
+if test "$SHELLSHIELD_AUTO_SNAPSHOT" = "1"
+    if test -z "$SHELLSHIELD_CONTEXT_PATH"
+        set -gx SHELLSHIELD_CONTEXT_PATH "$HOME/.shellshield/shell-context.json"
+    end
+    if test -z "$_SHELLSHIELD_CONTEXT_SYNCED"
+        set -gx _SHELLSHIELD_CONTEXT_SYNCED 1
+        if type -q bun
+            bun run "${process.argv[1]}" --snapshot --out "$SHELLSHIELD_CONTEXT_PATH" >/dev/null 2>&1
+        end
+    end
+end
+          `);
+    } else if (shellName === "pwsh" || shellName === "powershell") {
+      console.log(`
+# ShellShield PowerShell Integration
+if (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue) {
+  Set-PSReadLineKeyHandler -Key Enter -ScriptBlock {
+    param($key, $arg)
+    if ($env:SHELLSHIELD_SKIP) {
+      [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
+      return
+    }
+    if (Get-Command bun -ErrorAction SilentlyContinue) {
+      $line = $null
+      $cursor = $null
+      [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor)
+      if ($line) {
+        bun run "${process.argv[1]}" --check $line
+        if ($LASTEXITCODE -ne 0) { return }
+      }
+    }
+    [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
+  }
+} else {
+  Write-Host "PSReadLine not available; cannot hook Enter key."
+}
           `);
     } else {
       console.log(`
@@ -177,6 +260,30 @@ fi
 
   if (args.includes("--doctor")) {
     printDoctor();
+    process.exit(0);
+  }
+
+  if (args.includes("--score")) {
+    const idx = args.indexOf("--score");
+    const url = args[idx + 1];
+    if (!url) {
+      console.error("Usage: shellshield --score <url>");
+      process.exit(1);
+    }
+    const result = scoreUrlRisk(url, config.trustedDomains);
+    const json = args.includes("--json");
+    if (json) {
+      console.log(JSON.stringify(result));
+    } else {
+      console.log(`Score: ${result.score}/100`);
+      console.log(`Trusted: ${result.trusted ? "yes" : "no"}`);
+      if (result.reasons.length > 0) {
+        console.log("Reasons:");
+        for (const reason of result.reasons) {
+          console.log(`- ${reason}`);
+        }
+      }
+    }
     process.exit(0);
   }
 
@@ -222,6 +329,60 @@ fi
     writeShellContextSnapshot(finalOut, snapshot);
     console.log(finalOut);
     process.exit(0);
+  }
+
+  if (args.includes("--paste")) {
+    try {
+      const input = await Bun.stdin.text();
+      if (!input) process.exit(0);
+
+      const lines = input.split(/\r?\n/);
+      for (const line of lines) {
+        const command = line.trim();
+        if (!command) continue;
+
+        const result = checkDestructive(command);
+        if (result.blocked) {
+          if (config.mode === "permissive") {
+            console.error(
+              `⚠️  ShellShield WARNING: Command '${command}' would be blocked in enforce mode.\n` +
+                `Reason: ${result.reason}\n` +
+                `Suggestion: ${result.suggestion}`
+            );
+            logAudit(command, { ...result, blocked: false }, { source: "paste", mode: config.mode, threshold: config.threshold, decision: "warn" });
+            continue;
+          }
+          if (config.mode === "interactive") {
+            const confirmed = await promptConfirmation(command, result.reason);
+            if (confirmed) {
+              logAudit(command, { ...result, blocked: false }, { source: "paste", mode: config.mode, threshold: config.threshold, decision: "approved" });
+              if (process.stderr.isTTY) {
+                console.error("\x1b[32mApproved. Command will execute.\x1b[0m");
+              } else {
+                console.error("Approved. Command will execute.");
+              }
+              continue;
+            }
+            if (process.stderr.isTTY) {
+              console.error("\x1b[90mCancelled by user.\x1b[0m");
+            } else {
+              console.error("Cancelled by user.");
+            }
+          }
+
+          logAudit(command, result, { source: "paste", mode: config.mode, threshold: config.threshold, decision: "blocked" });
+          showBlockedMessage(result.reason, result.suggestion);
+          process.exit(2);
+        }
+
+        logAudit(command, result, { source: "paste", mode: config.mode, threshold: config.threshold, decision: "allowed" });
+      }
+
+      process.exit(0);
+    } catch (error) {
+      if (process.env.DEBUG) console.error(error);
+      process.exit(0);
+    }
   }
 
   if (args.includes("--check")) {

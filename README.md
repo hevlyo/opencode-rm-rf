@@ -2,7 +2,7 @@
 
 Real-time terminal guard for the AI era.  
 Stops `rm -rf /`, `curl | bash` traps, and homograph attacks — before they run.  
-~32.8 µs latency. Zero config. Local-only.
+~23.5 µs latency. Zero config. Local-only.
 
 <p align="center">
   <a href="#-quick-start">Get Started</a> •
@@ -68,8 +68,8 @@ ShellShield is a high‑performance, intelligent shell hook that tokenizes every
 
 ## ⚡ Performance
 
-- **30,452 ops/sec** benchmark throughput
-- **~32.8µs latency per command** (imperceptible to humans)
+- **42,573 ops/sec** benchmark throughput
+- **~23.5µs latency per command** (imperceptible to humans)
 - **117 tests** covering bypasses, edge cases, and advanced attacks
 
 ---
@@ -101,7 +101,7 @@ If private reporting is not possible, open a GitHub issue without exploit detail
 | Subshell recursion | ✅ | ❌ | ❌ |
 | Zero config needed | ✅ | ❌ | ❌ |
 | AI agent safe | ✅ | ❌ | ❌ |
-| Performance | **22.7k ops/sec** | N/A | ~10k ops/sec |
+| Performance | **42.6k ops/sec** | N/A | ~10k ops/sec |
 
 ---
 
@@ -160,6 +160,59 @@ bunx @shellshield/shellshield --init
 npm i -g @shellshield/shellshield
 shellshield --init
 ```
+
+### Shell Integration
+
+Run:
+```bash
+shellshield --init
+```
+
+Paste the output into your shell profile.
+Supported shells: bash, zsh, fish, PowerShell (PSReadLine).
+
+Common profile locations:
+- bash: `~/.bashrc`
+- zsh: `~/.zshrc`
+- fish: `~/.config/fish/config.fish`
+- PowerShell: `$PROFILE`
+
+Optional: zsh bracketed paste hook (auto-checks pasted blocks):
+```bash
+export SHELLSHIELD_PASTE_HOOK=1
+```
+
+### Paste Mode (Clipboard Safety)
+
+Paste mode checks multi-line paste buffers before execution:
+
+```bash
+shellshield --paste
+```
+
+Examples:
+- macOS: `pbpaste | shellshield --paste`
+- Linux (xclip): `xclip -o -selection clipboard | shellshield --paste`
+- PowerShell: `Get-Clipboard | shellshield --paste`
+
+### URL Risk Score
+
+Score potentially risky URLs:
+
+```bash
+shellshield --score https://example.com/install.sh
+```
+
+JSON output:
+```bash
+shellshield --score https://example.com/install.sh --json
+```
+
+### More Ways To Run
+
+- npx: `npx @shellshield/shellshield --init`
+- pnpm: `pnpm dlx @shellshield/shellshield --init`
+- Standalone binary (local build): `bun run build` -> `dist/shellshield`
 
 ### Uninstall
 

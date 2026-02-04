@@ -25,3 +25,46 @@ gpg --verify /tmp/shellshield-install.sh.asc /tmp/shellshield-install.sh
 Installer script:
 
 `/install.sh`
+
+Shell integration:
+
+```bash
+shellshield --init
+```
+
+Supported shells: bash, zsh, fish, PowerShell (PSReadLine).
+
+Optional: zsh bracketed paste hook:
+
+```bash
+export SHELLSHIELD_PASTE_HOOK=1
+```
+
+Paste mode:
+
+```bash
+shellshield --paste
+```
+
+Examples:
+- macOS: `pbpaste | shellshield --paste`
+- Linux (xclip): `xclip -o -selection clipboard | shellshield --paste`
+- PowerShell: `Get-Clipboard | shellshield --paste`
+
+URL risk score:
+
+```bash
+shellshield --score https://example.com/install.sh
+```
+
+JSON output:
+
+```bash
+shellshield --score https://example.com/install.sh --json
+```
+
+More ways to run:
+
+- npx: `npx @shellshield/shellshield --init`
+- pnpm: `pnpm dlx @shellshield/shellshield --init`
+- Standalone binary (local build): `bun run build` -> `dist/shellshield`

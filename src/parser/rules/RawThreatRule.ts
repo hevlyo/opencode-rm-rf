@@ -12,6 +12,11 @@ export class RawThreatRule implements SecurityRule {
 
   private readonly patterns: Array<{ pattern: RegExp; reason: string; suggestion: string }> = [
     {
+      pattern: /\b(?:pwsh|powershell)\b\s+(?:-encodedcommand|-enc)\b/i,
+      reason: "ENCODED POWERSHELL COMMAND DETECTED",
+      suggestion: "Encoded PowerShell payloads are high-risk. Decode and review before running.",
+    },
+    {
       pattern: /eval\s+\$\((curl|wget)\b/i,
       reason: "EVAL-PIPE-TO-SHELL DETECTED",
       suggestion: "Avoid eval with remote content. Download and review the script first.",
@@ -22,12 +27,12 @@ export class RawThreatRule implements SecurityRule {
       suggestion: "Avoid eval with remote content. Download and review the script first.",
     },
     {
-      pattern: /(?:sh|bash|zsh|dash|python\d*|perl|ruby|node|bun|php)\s+(?:-c|-e)\s+["']?\$\((curl|wget)\b/i,
+      pattern: /(?:sh|bash|zsh|dash|fish|pwsh|powershell|python\d*|perl|ruby|node|bun|php)\s+(?:-c|-e|-command)\s+["']?\$\((curl|wget)\b/i,
       reason: "COMMAND SUBSTITUTION DETECTED",
       suggestion: "Executing remote scripts via command substitution is dangerous.",
     },
     {
-      pattern: /(?:sh|bash|zsh|dash|python\d*|perl|ruby|node|bun|php)\s+(?:-c|-e)\s+["']?`(curl|wget)\b/i,
+      pattern: /(?:sh|bash|zsh|dash|fish|pwsh|powershell|python\d*|perl|ruby|node|bun|php)\s+(?:-c|-e|-command)\s+["']?`(curl|wget)\b/i,
       reason: "COMMAND SUBSTITUTION DETECTED",
       suggestion: "Executing remote scripts via command substitution is dangerous.",
     },
@@ -47,7 +52,7 @@ export class RawThreatRule implements SecurityRule {
     const { command } = context;
 
     // Check for deep subshells recursively
-    const subshellMatches = command.match(/\b(?:sh|bash|zsh)\s+-c\b/gi) || [];
+    const subshellMatches = command.match(/\b(?:sh|bash|zsh|dash|fish|pwsh|powershell)\s+-c\b/gi) || [];
     if (subshellMatches.length >= 4 && /\b(rm|shred|unlink|wipe|srm|dd)\b/i.test(command)) {
       return {
         blocked: true,

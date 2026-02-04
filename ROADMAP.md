@@ -45,7 +45,7 @@ ShellShield is the **filesystem guardian** for the AI era. While tools like Tiri
 - ✅ SHA256 + GPG-signed installer
 - ✅ npm/bunx publishing (`@shellshield/shellshield`)
 - ✅ CI/CD with GitHub Actions + Dependabot
-- ✅ 117 tests, 30k+ ops/sec benchmark
+- ✅ 117 tests, 42k+ ops/sec benchmark (10k iterations)
 - ✅ "Why Trust This?" section in README
 
 ---
