@@ -6,6 +6,7 @@ import { checkBlockedCommand, checkFindCommand } from "../command-checks";
 import { checkSubshellCommand } from "../subshell";
 import { SHELL_COMMANDS } from "../../constants";
 import { isSensitivePath } from "../../security/paths";
+import { getShellContextEntry, findBlockedTokenInShellContext } from "../../shell-context";
 
 /**
  * Rule: Core AST Analysis
@@ -18,6 +19,7 @@ import { isSensitivePath } from "../../security/paths";
  */
 export class CoreAstRule implements SecurityRule {
   readonly name = "CoreAstRule";
+  readonly phase = "post" as const;
 
   check(context: RuleContext): BlockResult | null {
     const { tokens, config, depth, recursiveCheck } = context;
@@ -128,9 +130,27 @@ export class CoreAstRule implements SecurityRule {
       const cmdName = entry.startsWith("\\") ? entry.slice(1) : basenamePart;
 
       let resolvedCmd = cmdName.toLowerCase();
-      if (cmdName.startsWith("$")) {
-        const varName = cmdName.slice(1);
-        resolvedCmd = (vars[varName] || cmdName).split("/").pop()?.toLowerCase() ?? "";
+      const resolvedVar = this.resolveVarToken(cmdName, vars);
+      if (resolvedVar) {
+        resolvedCmd = resolvedVar.split("/").pop()?.toLowerCase() ?? "";
+      }
+
+      // Optional shell-context awareness (aliases/functions).
+      // Enable by setting SHELLSHIELD_CONTEXT_PATH to a snapshot file.
+      if (!config.blocked.has(resolvedCmd)) {
+        const ctxEntry = getShellContextEntry(resolvedCmd);
+        if (ctxEntry && (ctxEntry.kind === "alias" || ctxEntry.kind === "function")) {
+          const hit = findBlockedTokenInShellContext(ctxEntry, config.blocked);
+          if (hit && hit !== resolvedCmd) {
+            return {
+              blocked: true,
+              reason: "SHELL CONTEXT OVERRIDE DETECTED",
+              suggestion:
+                `Your shell ${ctxEntry.kind} for '${resolvedCmd}' references '${hit}'. ` +
+                `Inspect with: type ${resolvedCmd}. Prefer bypass with: \\${resolvedCmd} or command ${resolvedCmd}.`,
+            };
+          }
+        }
       }
 
       if (config.allowed.has(resolvedCmd)) {
@@ -192,5 +212,30 @@ export class CoreAstRule implements SecurityRule {
       }
     
       return null;
+  }
+
+  private resolveVarToken(token: string, vars: Record<string, string>): string | null {
+    if (!token) return null;
+    if (token.startsWith("$")) {
+      const inner = token.slice(1);
+      const defaultIdx = inner.indexOf(":-");
+      const name = defaultIdx >= 0 ? inner.slice(0, defaultIdx) : inner;
+      const fallback = defaultIdx >= 0 ? inner.slice(defaultIdx + 2) : "";
+      const val = vars[name] ?? process.env[name];
+      if (val && val.length > 0) return val;
+      return fallback.length > 0 ? fallback : null;
+    }
+
+    if (token.startsWith("${") && token.endsWith("}")) {
+      const inner = token.slice(2, -1);
+      const defaultIdx = inner.indexOf(":-");
+      const name = defaultIdx >= 0 ? inner.slice(0, defaultIdx) : inner;
+      const fallback = defaultIdx >= 0 ? inner.slice(defaultIdx + 2) : "";
+      const val = vars[name] ?? process.env[name];
+      if (val && val.length > 0) return val;
+      return fallback.length > 0 ? fallback : null;
+    }
+
+    return null;
   }
 }

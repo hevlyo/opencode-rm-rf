@@ -140,6 +140,25 @@ ShellShield works out of the box. Create `.shellshield.json` to customize:
 - `SHELLSHIELD_MODE`: set `permissive` or `interactive`
 - `SHELLSHIELD_SKIP=1`: bypass checks for next command
 
+### Shell Context (Aliases / Functions)
+
+ShellShield analyzes the raw command string. Your shell aliases/functions are not automatically expanded.
+
+Optional safety check (recommended if you use lots of aliases):
+```bash
+# Generate a snapshot of `type <cmd>` for common commands
+bun run src/index.ts --snapshot
+
+# Enable checks (blocks if a seemingly-safe command resolves to an alias/function
+# that references a blocked primitive like rm/shred)
+export SHELLSHIELD_CONTEXT_PATH="$HOME/.shellshield/shell-context.json"
+```
+
+You can also inspect your current shell resolution with:
+```bash
+bun run src/index.ts --doctor
+```
+
 ### Examples
 
 **For AI coding assistants**

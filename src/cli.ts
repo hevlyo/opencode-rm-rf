@@ -4,6 +4,78 @@ import { getConfiguration } from "./config";
 import { ToolInput } from "./types";
 import { createInterface } from "readline";
 import { printStats } from "./stats";
+import { writeShellContextSnapshot, parseTypeOutput, ShellContextSnapshot } from "./shell-context";
+import { homedir } from "os";
+import { resolve } from "path";
+
+function runProbe(cmd: string[]): { ok: boolean; out: string } {
+  try {
+    const proc = Bun.spawnSync({
+      cmd,
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const out = (proc.stdout?.toString() ?? "") + (proc.stderr?.toString() ?? "");
+    return { ok: proc.exitCode === 0, out: out.trim() };
+  } catch {
+    return { ok: false, out: "" };
+  }
+}
+
+function printDoctor(): void {
+  const shell = process.env.SHELL || "";
+  const hasTrashPut = runProbe(["bash", "-lc", "command -v trash-put"]).ok;
+  const hasTrash = runProbe(["bash", "-lc", "command -v trash"]).ok;
+  const hasGioTrash = runProbe(["bash", "-lc", "command -v gio"]).ok;
+
+  console.log("ShellShield Doctor");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log(`Shell: ${shell || "(unknown)"}`);
+  console.log(`Mode: ${process.env.SHELLSHIELD_MODE || "(default)"}`);
+  console.log("\nSafer delete command:");
+  if (hasTrashPut) console.log("- trash-put (recommended)");
+  else if (hasTrash) console.log("- trash");
+  else if (hasGioTrash) console.log("- gio trash");
+  else console.log("- (none found) install trash-cli or use gio trash");
+
+  if (shell) {
+    const typeRm = runProbe(["bash", "-lc", `${shell} -ic 'type rm 2>/dev/null'`]).out;
+    if (typeRm) {
+      console.log("\nShell context (rm):");
+      console.log(typeRm.split("\n")[0]);
+      console.log("Note: ShellShield analyzes the raw command; alias/function bodies may not be visible.");
+    }
+  }
+}
+
+function isSafeCommandName(name: string): boolean {
+  return /^[A-Za-z0-9._+-]+$/.test(name);
+}
+
+function parseCsvArg(value: string | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function defaultSnapshotPath(): string {
+  return resolve(homedir(), ".shellshield", "shell-context.json");
+}
+
+function printSnapshotHelp(): void {
+  console.log("ShellShield Shell Context Snapshot");
+  console.log("Usage:");
+  console.log("  shellshield --snapshot [--out <path>] [--commands <csv>] [--shell <path>]");
+  console.log("");
+  console.log("Env:");
+  console.log("  SHELLSHIELD_CONTEXT_PATH=<path>   Enable alias/function safety checks");
+  console.log("");
+  console.log("Example:");
+  console.log("  shellshield --snapshot --out ~/.shellshield/shell-context.json --commands ls,rm,git");
+}
 
 async function promptConfirmation(command: string, reason: string): Promise<boolean> {
   if (!process.stdin.isTTY) return false;
@@ -71,6 +143,55 @@ trap '_shellshield_bash_preexec' DEBUG
 
   if (args.includes("--stats")) {
     printStats();
+    process.exit(0);
+  }
+
+  if (args.includes("--doctor")) {
+    printDoctor();
+    process.exit(0);
+  }
+
+  if (args.includes("--snapshot")) {
+    if (args.includes("--help") || args.includes("-h")) {
+      printSnapshotHelp();
+      process.exit(0);
+    }
+
+    const outIdx = args.indexOf("--out");
+    const outPath = outIdx !== -1 ? args[outIdx + 1] : "";
+    const shellIdx = args.indexOf("--shell");
+    const shellArg = shellIdx !== -1 ? args[shellIdx + 1] : "";
+    const commandsIdx = args.indexOf("--commands");
+    const commandsArg = commandsIdx !== -1 ? args[commandsIdx + 1] : "";
+
+    const shell = (shellArg && shellArg.trim()) || process.env.SHELL || "/bin/bash";
+    const safeShell = /^[A-Za-z0-9_./-]+$/.test(shell) ? shell : "/bin/bash";
+
+    const common = ["ls", "rm", "mv", "cp", "cat", "grep", "find", "xargs", "git", "curl", "wget", "sh", "bash", "zsh"];
+    const requested = parseCsvArg(commandsArg);
+    const cmdList = (requested.length > 0 ? requested : [...config.blocked, ...common])
+      .map((c) => c.trim())
+      .filter((c) => isSafeCommandName(c));
+
+    const uniq = Array.from(new Set(cmdList.map((c) => c.toLowerCase())));
+    const entries: ShellContextSnapshot["entries"] = {};
+
+    for (const cmd of uniq) {
+      const probe = runProbe([safeShell, "-ic", `type ${cmd} 2>/dev/null`]);
+      if (!probe.out) continue;
+      entries[cmd] = parseTypeOutput(probe.out);
+    }
+
+    const snapshot: ShellContextSnapshot = {
+      version: 1,
+      generatedAt: new Date().toISOString(),
+      shell: safeShell,
+      entries,
+    };
+
+    const finalOut = outPath && outPath.trim().length > 0 ? outPath.trim() : defaultSnapshotPath();
+    writeShellContextSnapshot(finalOut, snapshot);
+    console.log(finalOut);
     process.exit(0);
   }
 
