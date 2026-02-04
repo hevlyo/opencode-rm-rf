@@ -282,9 +282,10 @@ Want to add a new security rule? It’s fast:
 
 ---
 
-## 🤝 Credits & Inspiration
+## 🙏 Acknowledgments
 
-Originally inspired by [claude-rm-rf](https://github.com/zcaceres/claude-rm-rf) by Zach Caceres. Evolved into a complete security suite.
+- [claude-rm-rf](https://github.com/zcaceres/claude-rm-rf) by Zach Caceres — original inspiration for the project
+- [Tirith](https://github.com/sheeki03/tirith) by @sheeki03 — inspiration for `curl | bash` protection after seeing their X post; great work on supply chain security
 
 ---
 
