@@ -150,6 +150,17 @@ bun install
 bun run src/index.ts --init
 ```
 
+### Install via npm/bunx
+
+```bash
+bunx @shellshield/shellshield --init
+```
+
+```bash
+npm i -g @shellshield/shellshield
+shellshield --init
+```
+
 ### Uninstall
 
 Remove the hook line from your shell config (`~/.zshrc` or `~/.bashrc`) and
