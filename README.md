@@ -76,6 +76,16 @@ vhs demo.tape
 
 ---
 
+## 🔎 Why Trust This?
+
+- **Local-only execution**: runs as a shell hook on your machine.
+- **No daemon required**: checks happen at command time.
+- **Transparent audit log**: records decisions to `~/.shellshield/audit.log`.
+- **Open ruleset**: all detection logic lives in `src/parser/rules/`.
+- **Extensive tests**: security and bypass cases covered in `tests/`.
+
+---
+
 ## 🆚 Why Not Just Use `alias rm='rm -i'`?
 
 | Feature | ShellShield | Basic Aliases | shellcheck |
@@ -100,6 +110,15 @@ That’s it. ShellShield is now guarding your terminal.
 Try:
 ```bash
 rm -rf /tmp/test
+```
+
+### Uninstall
+
+Remove the hook line from your shell config (`~/.zshrc` or `~/.bashrc`) and
+restart your shell. Then delete local data:
+
+```bash
+rm -rf ~/.shellshield
 ```
 
 <details>
