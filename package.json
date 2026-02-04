@@ -15,6 +15,9 @@
   },
   "keywords": ["opencode", "hook", "safety", "trash"],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/shell-quote": "^1.7.5"
