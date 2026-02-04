@@ -190,14 +190,6 @@ Want to add a new security rule? It’s fast:
 
 ---
 
-## 🗺️ Roadmap
-
-- [ ] Public docs site with rule reference
-- [ ] Prebuilt binary releases
-- [ ] Team dashboards for audit logs
-
----
-
 ## 🤝 Credits & Inspiration
 
 Originally inspired by [claude-rm-rf](https://github.com/zcaceres/claude-rm-rf) by Zach Caceres. Evolved into a complete security suite.
