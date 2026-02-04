@@ -140,6 +140,7 @@ ShellShield works out of the box. Create `.shellshield.json` to customize:
 - `SHELLSHIELD_MODE`: set `permissive` or `interactive`
 - `SHELLSHIELD_SKIP=1`: bypass checks for next command
 - `SHELLSHIELD_MAX_SUBSHELL_DEPTH`: max nested `sh -c` analysis depth (default: 5)
+- Recommended: keep between `3` and `6` for low overhead; raise only if you rely on deep nested shells.
 
 ### Shell Context (Aliases / Functions)
 
