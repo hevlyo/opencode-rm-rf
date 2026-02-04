@@ -22,6 +22,13 @@ const rules: SecurityRule[] = [
   new CoreAstRule(),
 ];
 
+function annotateRule(ruleName: string, result: BlockResult | null): BlockResult | null {
+  if (!result) return null;
+  if (!result.blocked) return result;
+  const blocked = result as Extract<BlockResult, { blocked: true }>;
+  return { ...blocked, rule: blocked.rule ?? ruleName };
+}
+
 /**
  * Analyzes a shell command for destructive patterns and security threats.
  *
@@ -52,6 +59,7 @@ export function checkDestructive(
       suggestion:
         `Command contains nested subshells beyond the analysis limit (${maxDepth}). ` +
         "Simplify the command, or inspect it manually before running.",
+      rule: "Analyzer",
     };
   }
 
@@ -68,7 +76,7 @@ export function checkDestructive(
 
   for (const rule of rules) {
     if (rule.phase !== "pre") continue;
-    const result = rule.check(stringContext);
+    const result = annotateRule(rule.name, rule.check(stringContext));
     if (result?.blocked) return result;
   }
 
@@ -82,6 +90,7 @@ export function checkDestructive(
       blocked: true,
       reason: "MALFORMED COMMAND SYNTAX",
       suggestion: "Command contains invalid shell syntax.",
+      rule: "Analyzer",
     };
   }
 
@@ -96,7 +105,7 @@ export function checkDestructive(
 
   for (const rule of rules) {
     if (rule.phase !== "post") continue;
-    const result = rule.check(fullContext);
+    const result = annotateRule(rule.name, rule.check(fullContext));
     if (result?.blocked) return result;
   }
 

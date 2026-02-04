@@ -20,4 +20,4 @@ export interface TerminalInjectionResult {
 
 export type BlockResult =
   | { blocked: false }
-  | { blocked: true; reason: string; suggestion: string };
+  | { blocked: true; reason: string; suggestion: string; rule?: string };

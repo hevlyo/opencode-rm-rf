@@ -208,13 +208,13 @@ trap '_shellshield_bash_preexec' DEBUG
             `Reason: ${result.reason}\n` +
             `Suggestion: ${result.suggestion}`
         );
-        logAudit(command, { ...result, blocked: false });
+        logAudit(command, { ...result, blocked: false }, { source: "check", mode: config.mode, threshold: config.threshold, decision: "warn" });
         process.exit(0);
       }
       if (config.mode === "interactive") {
         const confirmed = await promptConfirmation(command, result.reason);
         if (confirmed) {
-           logAudit(command, { ...result, blocked: false });
+           logAudit(command, { ...result, blocked: false }, { source: "check", mode: config.mode, threshold: config.threshold, decision: "approved" });
            if (process.stderr.isTTY) {
              console.error("\x1b[32mApproved. Command will execute.\x1b[0m");
            } else {
@@ -229,9 +229,11 @@ trap '_shellshield_bash_preexec' DEBUG
         }
       }
 
+      logAudit(command, result, { source: "check", mode: config.mode, threshold: config.threshold, decision: "blocked" });
       showBlockedMessage(result.reason, result.suggestion);
       process.exit(2);
     }
+    logAudit(command, result, { source: "check", mode: config.mode, threshold: config.threshold, decision: "allowed" });
     process.exit(0);
   }
 
@@ -252,7 +254,6 @@ trap '_shellshield_bash_preexec' DEBUG
     }
 
     const result = checkDestructive(command);
-    logAudit(command, result);
 
     if (result.blocked) {
       if (config.mode === "permissive") {
@@ -261,13 +262,14 @@ trap '_shellshield_bash_preexec' DEBUG
             `Reason: ${result.reason}\n` +
             `Suggestion: ${result.suggestion}`
         );
+        logAudit(command, { ...result, blocked: false }, { source: "stdin", mode: config.mode, threshold: config.threshold, decision: "warn" });
         process.exit(0);
       }
 
       if (config.mode === "interactive") {
         const confirmed = await promptConfirmation(command, result.reason);
         if (confirmed) {
-           logAudit(command, { ...result, blocked: false });
+           logAudit(command, { ...result, blocked: false }, { source: "stdin", mode: config.mode, threshold: config.threshold, decision: "approved" });
            if (process.stderr.isTTY) {
              console.error("\x1b[32mApproved. Command will execute.\x1b[0m");
            } else {
@@ -282,10 +284,12 @@ trap '_shellshield_bash_preexec' DEBUG
         }
       }
 
+      logAudit(command, result, { source: "stdin", mode: config.mode, threshold: config.threshold, decision: "blocked" });
       showBlockedMessage(result.reason, result.suggestion);
       process.exit(2);
     }
 
+    logAudit(command, result, { source: "stdin", mode: config.mode, threshold: config.threshold, decision: "allowed" });
     process.exit(0);
   } catch (error) {
     if (process.env.DEBUG) console.error(error);

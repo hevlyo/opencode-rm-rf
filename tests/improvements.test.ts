@@ -50,7 +50,7 @@ async function runHook(
     cmd: ["/home/hevlyo/.bun/bin/bun", "run", HOOK_PATH],
     stdin: "pipe",
     stderr: "pipe",
-    stdout: "pipe",
+    stdout: "ignore",
     env: { ...process.env, SHELLSHIELD_MODE: "enforce", ...env },
     cwd: PROJECT_ROOT,
   });
