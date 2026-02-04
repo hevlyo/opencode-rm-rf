@@ -94,7 +94,17 @@ trap '_shellshield_bash_preexec' DEBUG
         const confirmed = await promptConfirmation(command, result.reason);
         if (confirmed) {
            logAudit(command, { ...result, blocked: false });
+           if (process.stderr.isTTY) {
+             console.error("\x1b[32mApproved. Command will execute.\x1b[0m");
+           } else {
+             console.error("Approved. Command will execute.");
+           }
            process.exit(0);
+        }
+        if (process.stderr.isTTY) {
+          console.error("\x1b[90mCancelled by user.\x1b[0m");
+        } else {
+          console.error("Cancelled by user.");
         }
       }
 
@@ -137,7 +147,17 @@ trap '_shellshield_bash_preexec' DEBUG
         const confirmed = await promptConfirmation(command, result.reason);
         if (confirmed) {
            logAudit(command, { ...result, blocked: false });
+           if (process.stderr.isTTY) {
+             console.error("\x1b[32mApproved. Command will execute.\x1b[0m");
+           } else {
+             console.error("Approved. Command will execute.");
+           }
            process.exit(0);
+        }
+        if (process.stderr.isTTY) {
+          console.error("\x1b[90mCancelled by user.\x1b[0m");
+        } else {
+          console.error("Cancelled by user.");
         }
       }
 
