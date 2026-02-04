@@ -37,11 +37,6 @@ ShellShield is a high‑performance, intelligent shell hook that tokenizes every
 
 *ShellShield intercepting `rm -rf /` and blocking a homograph attack before execution.*
 
-Generate the demo locally:
-```bash
-vhs demo.tape
-```
-
 ---
 
 ## ✨ Features
@@ -70,8 +65,8 @@ vhs demo.tape
 
 ## ⚡ Performance
 
-- **22,700 ops/sec** benchmark throughput
-- **~27µs latency per command** (imperceptible to humans)
+- **28,884 ops/sec** benchmark throughput
+- **~34.6µs latency per command** (imperceptible to humans)
 - **96 tests** covering bypasses, edge cases, and advanced attacks
 
 ---
@@ -83,6 +78,14 @@ vhs demo.tape
 - **Transparent audit log**: records decisions to `~/.shellshield/audit.log`.
 - **Open ruleset**: all detection logic lives in `src/parser/rules/`.
 - **Extensive tests**: security and bypass cases covered in `tests/`.
+
+---
+
+## 🔐 Security
+
+If you believe you have found a security issue, please report it privately.
+Preferred: open a GitHub Security Advisory with clear reproduction steps and impact.
+If private reporting is not possible, open a GitHub issue without exploit details.
 
 ---
 
