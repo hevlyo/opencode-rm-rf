@@ -28,9 +28,4 @@ jobs:
         with:
           files: ./coverage/lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false
-      - name: Skip Codecov (no token)
-        if: ${{ env.CODECOV_TOKEN == '' }}
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        run: echo "CODECOV_TOKEN not set; skipping upload."
+          fail_ci_if_error: true
