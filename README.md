@@ -154,6 +154,9 @@ bun run src/index.ts --snapshot
 # Enable checks (blocks if a seemingly-safe command resolves to an alias/function
 # that references a blocked primitive like rm/shred)
 export SHELLSHIELD_CONTEXT_PATH="$HOME/.shellshield/shell-context.json"
+
+# Optional: auto-refresh snapshot when your shell loads the hook
+export SHELLSHIELD_AUTO_SNAPSHOT=1
 ```
 
 You can also inspect your current shell resolution with:

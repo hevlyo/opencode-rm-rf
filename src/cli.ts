@@ -126,6 +126,20 @@ zle -N accept-line _shellshield_accept_line
 autoload -Uz add-zsh-hook
 add-zsh-hook -d preexec _shellshield_preexec 2>/dev/null
 unfunction _shellshield_preexec 2>/dev/null
+
+# Optional: auto-refresh alias/function context snapshot
+# Enable by setting: export SHELLSHIELD_AUTO_SNAPSHOT=1
+if [[ "$SHELLSHIELD_AUTO_SNAPSHOT" == "1" ]]; then
+    if [[ -z "$SHELLSHIELD_CONTEXT_PATH" ]]; then
+        export SHELLSHIELD_CONTEXT_PATH="$HOME/.shellshield/shell-context.json"
+    fi
+    if [[ -z "$_SHELLSHIELD_CONTEXT_SYNCED" ]]; then
+        export _SHELLSHIELD_CONTEXT_SYNCED=1
+        if command -v bun >/dev/null 2>&1; then
+            bun run "${process.argv[1]}" --snapshot --out "$SHELLSHIELD_CONTEXT_PATH" >/dev/null 2>&1
+        fi
+    fi
+fi
           `);
     } else {
       console.log(`
@@ -137,6 +151,20 @@ _shellshield_bash_preexec() {
     fi
 }
 trap '_shellshield_bash_preexec' DEBUG
+
+# Optional: auto-refresh alias/function context snapshot
+# Enable by setting: export SHELLSHIELD_AUTO_SNAPSHOT=1
+if [[ "$SHELLSHIELD_AUTO_SNAPSHOT" == "1" ]]; then
+    if [[ -z "$SHELLSHIELD_CONTEXT_PATH" ]]; then
+        export SHELLSHIELD_CONTEXT_PATH="$HOME/.shellshield/shell-context.json"
+    fi
+    if [[ -z "$_SHELLSHIELD_CONTEXT_SYNCED" ]]; then
+        export _SHELLSHIELD_CONTEXT_SYNCED=1
+        if command -v bun >/dev/null 2>&1; then
+            bun run "${process.argv[1]}" --snapshot --out "$SHELLSHIELD_CONTEXT_PATH" >/dev/null 2>&1
+        fi
+    fi
+fi
           `);
     }
     process.exit(0);
