@@ -10,6 +10,8 @@ const ConfigSchema = z.object({
   allowed: z.array(z.string()).optional(),
   trustedDomains: z.array(z.string()).optional(),
   threshold: z.number().int().positive().optional(),
+  maxSubshellDepth: z.number().int().min(0).optional(),
+  contextPath: z.string().min(1).optional(),
   mode: z.enum(["enforce", "permissive", "interactive"]).optional(),
   customRules: z
     .array(
@@ -30,7 +32,10 @@ function readConfigFile(path: string): FileConfig | null {
     const parsed = ConfigSchema.safeParse(raw);
     if (!parsed.success) {
       if (process.env.DEBUG) {
-        console.warn(`[ShellShield] Invalid config at ${path}:`, parsed.error);
+        const issues = parsed.error.issues
+          .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+          .join("; ");
+        console.warn(`[ShellShield] Invalid config at ${path}: ${issues}`);
       }
       return null;
     }
@@ -68,6 +73,8 @@ function loadConfigFile(): Partial<Config> {
   const allowedSource = localConfig?.allowed ?? homeConfig?.allowed;
   const trustedDomains = localConfig?.trustedDomains ?? homeConfig?.trustedDomains;
   const threshold = localConfig?.threshold ?? homeConfig?.threshold;
+  const maxSubshellDepth = localConfig?.maxSubshellDepth ?? homeConfig?.maxSubshellDepth;
+  const contextPath = localConfig?.contextPath ?? homeConfig?.contextPath;
   const mode = localConfig?.mode ?? homeConfig?.mode;
   const customRules = localConfig?.customRules ?? homeConfig?.customRules;
 
@@ -80,6 +87,8 @@ function loadConfigFile(): Partial<Config> {
       : undefined,
     trustedDomains,
     threshold,
+    maxSubshellDepth,
+    contextPath,
     mode,
     customRules,
   };
@@ -87,16 +96,28 @@ function loadConfigFile(): Partial<Config> {
 
 export function getConfiguration(): Config {
   const fileConfig = loadConfigFile();
+
   const blocked = fileConfig.blocked || new Set(DEFAULT_BLOCKED);
   const allowed = fileConfig.allowed || new Set<string>();
   const trustedDomains = fileConfig.trustedDomains || DEFAULT_TRUSTED_DOMAINS;
+
   const threshold =
     fileConfig.threshold || parseInt(process.env.SHELLSHIELD_THRESHOLD || "50", 10);
+
+  const maxSubshellDepth =
+    fileConfig.maxSubshellDepth ??
+    (Number.parseInt(process.env.SHELLSHIELD_MAX_SUBSHELL_DEPTH || "5", 10) || 5);
+
   const mode =
     (process.env.SHELLSHIELD_MODE as "enforce" | "permissive" | "interactive") ||
     fileConfig.mode ||
     "enforce";
+
   const customRules = fileConfig.customRules || [];
+
+  if (!process.env.SHELLSHIELD_CONTEXT_PATH && fileConfig.contextPath) {
+    process.env.SHELLSHIELD_CONTEXT_PATH = fileConfig.contextPath;
+  }
 
   if (process.env.OPENCODE_BLOCK_COMMANDS) {
     process.env.OPENCODE_BLOCK_COMMANDS.split(",").forEach((cmd) =>
@@ -110,5 +131,14 @@ export function getConfiguration(): Config {
     );
   }
 
-  return { blocked, allowed, trustedDomains, threshold, mode, customRules };
+  return {
+    blocked,
+    allowed,
+    trustedDomains,
+    threshold,
+    maxSubshellDepth,
+    contextPath: fileConfig.contextPath,
+    mode,
+    customRules,
+  };
 }

@@ -14,6 +14,7 @@ const TEST_CONTEXT = {
   threshold: 50,
   mode: "enforce" as const,
   customRules: [],
+  maxSubshellDepth: 5,
 };
 
 async function readStream(stream?: ReadableStream<Uint8Array> | null): Promise<string> {

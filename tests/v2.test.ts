@@ -17,6 +17,7 @@ const TEST_CONTEXT = {
   threshold: 50,
   mode: "enforce" as const,
   customRules: [],
+  maxSubshellDepth: 5,
 };
 
 function analyze(command: string) {

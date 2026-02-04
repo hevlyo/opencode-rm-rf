@@ -11,6 +11,8 @@ export interface Config {
   threshold: number;
   mode: "enforce" | "permissive" | "interactive";
   customRules: Array<{ pattern: string; suggestion: string }>;
+  maxSubshellDepth: number;
+  contextPath?: string;
 }
 
 export interface TerminalInjectionResult {

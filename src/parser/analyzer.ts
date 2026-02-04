@@ -48,10 +48,9 @@ export function checkDestructive(
   depth = 0,
   context?: Config
 ): BlockResult {
-  const maxDepth = Math.max(
-    0,
-    Number.parseInt(process.env.SHELLSHIELD_MAX_SUBSHELL_DEPTH || "5", 10) || 5
-  );
+
+  const config = context ?? getConfiguration();
+  const maxDepth = config.maxSubshellDepth;
   if (depth > maxDepth) {
     return {
       blocked: true,
@@ -63,7 +62,6 @@ export function checkDestructive(
     };
   }
 
-  const config = context ?? getConfiguration();
 
   // 1. Pre-parsing checks (String-based rules)
   const stringContext: RuleContext = {

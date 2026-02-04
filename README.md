@@ -126,7 +126,9 @@ ShellShield works out of the box. Create `.shellshield.json` to customize:
   "allowed": ["ls", "cat"],
   "trustedDomains": ["github.com", "my-company.com"],
   "threshold": 100,
-  "mode": "enforce"
+  "mode": "enforce",
+  "maxSubshellDepth": 5,
+  "contextPath": "~/.shellshield/shell-context.json"
 }
 ```
 
