@@ -3,10 +3,25 @@ import { spawn } from "bun";
 import { join } from "path";
 import { mkdirSync, writeFileSync, rmSync, existsSync } from "fs";
 import { execSync } from "child_process";
+import { checkDestructive } from "../src/parser/analyzer";
+import { DEFAULT_BLOCKED, DEFAULT_TRUSTED_DOMAINS } from "../src/constants";
 
 const PROJECT_ROOT = join(import.meta.dir, "..");
 const HOOK_PATH = join(PROJECT_ROOT, "src", "index.ts");
 const TEST_DIR = join(import.meta.dir, "tmp-v2-tests");
+
+const TEST_CONTEXT = {
+  blocked: new Set(DEFAULT_BLOCKED),
+  allowed: new Set<string>(),
+  trustedDomains: DEFAULT_TRUSTED_DOMAINS,
+  threshold: 50,
+  mode: "enforce" as const,
+  customRules: [],
+};
+
+function analyze(command: string) {
+  return checkDestructive(command, 0, TEST_CONTEXT);
+}
 
 function setupTestDir() {
   if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
@@ -73,9 +88,11 @@ describe("ShellShield v2.0 - Protected Paths", () => {
   });
 
   test("blocks deleting .git folder", async () => {
-    const { exitCode, stderr } = await runHook("rm -rf .git");
-    expect(exitCode).toBe(2);
-    expect(stderr).toContain("PROTECTED");
+    const result = analyze("rm -rf .git");
+    expect(result.blocked).toBe(true);
+    if (result.blocked) {
+      expect(result.reason).toContain("PROTECTED");
+    }
   });
 });
 
