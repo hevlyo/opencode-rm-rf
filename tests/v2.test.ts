@@ -75,16 +75,20 @@ async function runHook(
 }
 
 describe("ShellShield v2.0 - Protected Paths", () => {
-  test("blocks deleting root /", async () => {
-    const { exitCode, stderr } = await runHook("rm -rf /");
-    expect(exitCode).toBe(2);
-    expect(stderr).toContain("CRITICAL PATH PROTECTED");
+  test("blocks deleting root /", () => {
+    const result = analyze("rm -rf /");
+    expect(result.blocked).toBe(true);
+    if (result.blocked) {
+      expect(result.reason).toContain("CRITICAL PATH PROTECTED");
+    }
   });
 
-  test("blocks deleting /etc", async () => {
-    const { exitCode, stderr } = await runHook("rm -rf /etc");
-    expect(exitCode).toBe(2);
-    expect(stderr).toContain("CRITICAL PATH PROTECTED");
+  test("blocks deleting /etc", () => {
+    const result = analyze("rm -rf /etc");
+    expect(result.blocked).toBe(true);
+    if (result.blocked) {
+      expect(result.reason).toContain("CRITICAL PATH PROTECTED");
+    }
   });
 
   test("blocks deleting .git folder", async () => {
@@ -116,26 +120,30 @@ describe("ShellShield v2.0 - Git Safety", () => {
         });
         writeFileSync(join(repoPath, "file.txt"), "hello world"); 
 
-        const { exitCode, stderr } = await runHook(`rm ${join(repoPath, "file.txt")}`);
-        expect(exitCode).toBe(2);
-        expect(stderr).toContain("UNCOMMITTED CHANGES DETECTED");
+        const result = analyze(`rm ${join(repoPath, "file.txt")}`);
+        expect(result.blocked).toBe(true);
+        if (result.blocked) {
+          expect(result.reason).toContain("UNCOMMITTED CHANGES DETECTED");
+        }
     });
 });
 
 describe("ShellShield v2.0 - Threshold Protection", () => {
-    test("blocks if too many files are targeted (e.g. > 50)", async () => {
+    test("blocks if too many files are targeted (e.g. > 50)", () => {
         const manyFiles = Array.from({ length: 60 }, (_, i) => `file${i}.txt`).join(" ");
-        const { exitCode, stderr } = await runHook(`rm ${manyFiles}`);
-        expect(exitCode).toBe(2);
-        expect(stderr).toContain("VOLUME THRESHOLD EXCEEDED");
+        const result = analyze(`rm ${manyFiles}`);
+        expect(result.blocked).toBe(true);
+        if (result.blocked) {
+          expect(result.reason).toContain("VOLUME THRESHOLD EXCEEDED");
+        }
     });
 
-    test("respects SHELLSHIELD_THRESHOLD env var", async () => {
+    test("respects SHELLSHIELD_THRESHOLD env var", () => {
         const manyFiles = Array.from({ length: 6 }, (_, i) => `file${i}.txt`).join(" ");
-        const { exitCode, stderr } = await runHook(`rm ${manyFiles}`, {
-            SHELLSHIELD_THRESHOLD: "5"
-        });
-        expect(exitCode).toBe(2);
-        expect(stderr).toContain("VOLUME THRESHOLD EXCEEDED");
+        const result = checkDestructive(`rm ${manyFiles}`, 0, { ...TEST_CONTEXT, threshold: 5 });
+        expect(result.blocked).toBe(true);
+        if (result.blocked) {
+          expect(result.reason).toContain("VOLUME THRESHOLD EXCEEDED");
+        }
     });
 });

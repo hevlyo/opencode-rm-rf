@@ -44,7 +44,7 @@ async function runHook(command: string): Promise<{ exitCode: number; stderr: str
     stdin: "pipe",
     stderr: "pipe",
     stdout: "ignore",
-    env: { ...process.env, SHELLSHIELD_MODE: "enforce" },
+    env: { ...process.env, SHELLSHIELD_AUDIT_DISABLED: "1", SHELLSHIELD_MODE: "enforce" },
     cwd: PROJECT_ROOT,
   });
 
@@ -241,7 +241,7 @@ describe("Edge cases", () => {
       stdin: "pipe",
       stderr: "pipe",
       stdout: "ignore",
-      env: { ...process.env, SHELLSHIELD_MODE: "enforce" },
+      env: { ...process.env, SHELLSHIELD_AUDIT_DISABLED: "1", SHELLSHIELD_MODE: "enforce" },
       cwd: PROJECT_ROOT,
     });
 

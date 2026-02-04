@@ -51,7 +51,7 @@ async function runHook(
     stdin: "pipe",
     stderr: "pipe",
     stdout: "ignore",
-    env: { ...process.env, SHELLSHIELD_MODE: "enforce", ...env },
+    env: { ...process.env, SHELLSHIELD_AUDIT_DISABLED: "1", SHELLSHIELD_MODE: "enforce", ...env },
     cwd: PROJECT_ROOT,
   });
 
@@ -123,8 +123,8 @@ describe("Configuration", () => {
       cmd: ["/home/hevlyo/.bun/bin/bun", "run", HOOK_PATH],
       stdin: "pipe",
       stderr: "pipe",
-      stdout: "pipe",
-      env: { ...process.env, SHELLSHIELD_MODE: "enforce", OPENCODE_BLOCK_COMMANDS: "custom-delete,another-one" },
+      stdout: "ignore",
+      env: { ...process.env, SHELLSHIELD_AUDIT_DISABLED: "1", SHELLSHIELD_MODE: "enforce", OPENCODE_BLOCK_COMMANDS: "custom-delete,another-one" },
       cwd: PROJECT_ROOT,
     });
 
@@ -141,8 +141,8 @@ describe("Configuration", () => {
       cmd: ["/home/hevlyo/.bun/bin/bun", "run", HOOK_PATH],
       stdin: "pipe",
       stderr: "pipe",
-      stdout: "pipe",
-      env: { ...process.env, SHELLSHIELD_MODE: "enforce", OPENCODE_ALLOW_COMMANDS: "rm" },
+      stdout: "ignore",
+      env: { ...process.env, SHELLSHIELD_AUDIT_DISABLED: "1", SHELLSHIELD_MODE: "enforce", OPENCODE_ALLOW_COMMANDS: "rm" },
       cwd: PROJECT_ROOT,
     });
 

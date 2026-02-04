@@ -47,7 +47,7 @@ async function runHook(
     stdin: "pipe",
     stderr: "pipe",
     stdout: "pipe",
-    env: { ...process.env, SHELLSHIELD_MODE: "enforce", ...env },
+    env: { ...process.env, SHELLSHIELD_AUDIT_DISABLED: "1", SHELLSHIELD_MODE: "enforce", ...env },
     cwd: PROJECT_ROOT
   });
 
@@ -165,7 +165,7 @@ describe("ShellShield v2.1 - Enhanced DX & Configuration", () => {
   describe("Audit Logging", () => {
       test("writes audit log entry for blocked command", async () => {
           const tempHome = mkdtempSync(join(tmpdir(), "shellshield-audit-"));
-          const { exitCode } = await runHook("rm -rf /", [], { HOME: tempHome });
+          const { exitCode } = await runHook("rm -rf /", [], { HOME: tempHome, SHELLSHIELD_AUDIT_DISABLED: "0" });
           expect(exitCode).toBe(2);
 
           const auditPath = join(tempHome, ".shellshield", "audit.log");

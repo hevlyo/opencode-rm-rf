@@ -24,6 +24,7 @@ function getAuditPath(): string {
 function rotateIfNeeded(logPath: string): void {
   if (!existsSync(logPath)) return;
   try {
+    if ((process.env.SHELLSHIELD_AUDIT_DISABLED || "").trim() === "1") return;
     const stats = statSync(logPath);
     if (stats.size <= 1 * 1024 * 1024) return;
     const backupPath = logPath + ".1";

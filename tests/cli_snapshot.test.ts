@@ -29,7 +29,7 @@ async function runCheck(command: string, env: Record<string, string> = {}, stdin
     stdin: stdin ? "pipe" : "ignore",
     stderr: "pipe",
     stdout: "ignore",
-    env: { ...process.env, ...env },
+    env: { ...process.env, SHELLSHIELD_AUDIT_DISABLED: "1", ...env },
     cwd: PROJECT_ROOT,
   });
   if (stdin && proc.stdin) {
@@ -48,7 +48,7 @@ async function runCheckTty(command: string, env: Record<string, string>, stdin: 
     stdin: "pipe",
     stderr: "pipe",
     stdout: "pipe",
-    env: { ...process.env, ...env },
+    env: { ...process.env, SHELLSHIELD_AUDIT_DISABLED: "1", ...env },
     cwd: PROJECT_ROOT,
   });
   proc.stdin.write(stdin);
