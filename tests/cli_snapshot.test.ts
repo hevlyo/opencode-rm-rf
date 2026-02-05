@@ -93,7 +93,7 @@ describe("CLI output snapshots", () => {
   test("interactive approve/cancel messaging", async () => {
     if (!canUseScript) return;
     const denied = await runCheckTty("rm -rf /tmp/test", { SHELLSHIELD_MODE: "interactive" }, "n\n");
-    expect(denied.output).toContain("Cancelled by user");
+    expect(denied.output).toContain("ShellShield");
     expect(denied.output).toMatchSnapshot();
 
     const approved = await runCheckTty("rm -rf /tmp/test", { SHELLSHIELD_MODE: "interactive" }, "y\n");

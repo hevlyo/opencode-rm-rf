@@ -26,7 +26,6 @@ exports[`CLI output snapshots interactive approve/cancel messaging 1`] = `
    Command: rm -rf /tmp/test
    Are you sure you want to execute this? [y/N] \x1B[49Gn
 
-\x1B[0m\x1B[31m\x1B[90mCancelled by user.\x1B[0m\x1B[0m
 \x1B[0m\x1B[31m
 \x1B[31m🛡️ \x1B[0mShellShield \x1B[31mBLOCKED\x1B[0m: Destructive command 'rm' detected
 \x1B[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1B[0m

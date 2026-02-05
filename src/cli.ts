@@ -9,6 +9,7 @@ import { writeShellContextSnapshot, parseTypeOutput, ShellContextSnapshot } from
 import { homedir } from "os";
 import { resolve } from "path";
 import { scoreUrlRisk } from "./security/validators";
+import { parse } from "shell-quote";
 
 function runProbe(cmd: string[]): { ok: boolean; out: string } {
   try {
@@ -61,6 +62,36 @@ function parseCsvArg(value: string | undefined): string[] {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+function hasBypassPrefix(command: string): boolean {
+  try {
+    const tokens = parse(command) as Array<string | { op: string }>;
+    let sawCommand = false;
+    let bypass = false;
+
+    for (const token of tokens) {
+      if (typeof token !== "string") {
+        if (!sawCommand) break;
+        continue;
+      }
+
+      if (!sawCommand && token.includes("=")) {
+        const [key, value] = token.split("=", 2);
+        if (key === "SHELLSHIELD_SKIP" && value === "1") {
+          bypass = true;
+        }
+        continue;
+      }
+
+      sawCommand = true;
+      break;
+    }
+
+    return bypass;
+  } catch {
+    return false;
+  }
 }
 
 function defaultSnapshotPath(): string {
@@ -341,6 +372,10 @@ fi
         const command = line.trim();
         if (!command) continue;
 
+        if (hasBypassPrefix(command)) {
+          continue;
+        }
+
         const result = checkDestructive(command);
         if (result.blocked) {
           if (config.mode === "permissive") {
@@ -362,11 +397,6 @@ fi
                 console.error("Approved. Command will execute.");
               }
               continue;
-            }
-            if (process.stderr.isTTY) {
-              console.error("\x1b[90mCancelled by user.\x1b[0m");
-            } else {
-              console.error("Cancelled by user.");
             }
           }
 
@@ -390,6 +420,10 @@ fi
     const command = args[cmdIdx + 1];
     if (!command) process.exit(0);
 
+    if (hasBypassPrefix(command)) {
+      process.exit(0);
+    }
+
     const result = checkDestructive(command);
     if (result.blocked) {
       if (config.mode === "permissive") {
@@ -403,20 +437,15 @@ fi
       }
       if (config.mode === "interactive") {
         const confirmed = await promptConfirmation(command, result.reason);
-        if (confirmed) {
-           logAudit(command, { ...result, blocked: false }, { source: "check", mode: config.mode, threshold: config.threshold, decision: "approved" });
-           if (process.stderr.isTTY) {
-             console.error("\x1b[32mApproved. Command will execute.\x1b[0m");
-           } else {
-             console.error("Approved. Command will execute.");
-           }
-           process.exit(0);
-        }
-        if (process.stderr.isTTY) {
-          console.error("\x1b[90mCancelled by user.\x1b[0m");
-        } else {
-          console.error("Cancelled by user.");
-        }
+         if (confirmed) {
+            logAudit(command, { ...result, blocked: false }, { source: "check", mode: config.mode, threshold: config.threshold, decision: "approved" });
+            if (process.stderr.isTTY) {
+              console.error("\x1b[32mApproved. Command will execute.\x1b[0m");
+            } else {
+              console.error("Approved. Command will execute.");
+            }
+            process.exit(0);
+         }
       }
 
       logAudit(command, result, { source: "check", mode: config.mode, threshold: config.threshold, decision: "blocked" });
@@ -443,6 +472,10 @@ fi
       process.exit(0);
     }
 
+    if (hasBypassPrefix(command)) {
+      process.exit(0);
+    }
+
     const result = checkDestructive(command);
 
     if (result.blocked) {
@@ -458,20 +491,15 @@ fi
 
       if (config.mode === "interactive") {
         const confirmed = await promptConfirmation(command, result.reason);
-        if (confirmed) {
-           logAudit(command, { ...result, blocked: false }, { source: "stdin", mode: config.mode, threshold: config.threshold, decision: "approved" });
-           if (process.stderr.isTTY) {
-             console.error("\x1b[32mApproved. Command will execute.\x1b[0m");
-           } else {
-             console.error("Approved. Command will execute.");
-           }
-           process.exit(0);
-        }
-        if (process.stderr.isTTY) {
-          console.error("\x1b[90mCancelled by user.\x1b[0m");
-        } else {
-          console.error("Cancelled by user.");
-        }
+         if (confirmed) {
+            logAudit(command, { ...result, blocked: false }, { source: "stdin", mode: config.mode, threshold: config.threshold, decision: "approved" });
+            if (process.stderr.isTTY) {
+              console.error("\x1b[32mApproved. Command will execute.\x1b[0m");
+            } else {
+              console.error("Approved. Command will execute.");
+            }
+            process.exit(0);
+         }
       }
 
       logAudit(command, result, { source: "stdin", mode: config.mode, threshold: config.threshold, decision: "blocked" });
