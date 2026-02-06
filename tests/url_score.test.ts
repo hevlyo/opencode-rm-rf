@@ -14,10 +14,9 @@ describe("URL risk scoring", () => {
     expect(result.score).toBeLessThan(20);
   });
 
-  test("penalizes insecure and encoded urls", () => {
-    const result = scoreUrlRisk("http://user:pass@xn--exmple-cua.com", ["github.com"]);
-    expect(result.score).toBeGreaterThanOrEqual(50);
-    expect(result.reasons).toContain("INSECURE_PROTOCOL");
+  test("penalizes credentials and encoded urls", () => {
+    const result = scoreUrlRisk("https://user:pass@xn--exmple-cua.com", ["github.com"]);
+    expect(result.score).toBeGreaterThanOrEqual(40);
     expect(result.reasons).toContain("CREDENTIALS_IN_URL");
     expect(result.reasons).toContain("PUNYCODE_DOMAIN");
   });

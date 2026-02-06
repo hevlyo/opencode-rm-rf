@@ -78,13 +78,18 @@ export function parseTypeOutput(output: string): ShellContextEntry {
   }
 
   // zsh: "ls is an alias for ls -G" (sometimes quoted)
-  const aliasForQuoted = first.match(/\bis an alias for\s+(['`\"])([\s\S]*?)\1/);
-  if (aliasForQuoted) {
-    return { kind: "alias", output: out, expansion: aliasForQuoted[2] };
-  }
-  const aliasFor = first.match(/\bis an alias for\s+(.+)$/);
-  if (aliasFor) {
-    return { kind: "alias", output: out, expansion: aliasFor[1].trim() };
+  const aliasForMarker = " is an alias for ";
+  const aliasForIdx = first.indexOf(aliasForMarker);
+  if (aliasForIdx !== -1) {
+    let expansion = first.slice(aliasForIdx + aliasForMarker.length).trim();
+    if (expansion.length >= 2) {
+      const firstChar = expansion[0];
+      const lastChar = expansion[expansion.length - 1];
+      if ((firstChar === "'" || firstChar === "`" || firstChar === '"') && firstChar === lastChar) {
+        expansion = expansion.slice(1, -1);
+      }
+    }
+    return { kind: "alias", output: out, expansion };
   }
 
   // bash/zsh: function output + body
@@ -103,12 +108,12 @@ export function parseTypeOutput(output: string): ShellContextEntry {
   }
 
   // file paths
-  if (/\bis\s+\//.test(first)) {
+  if (first.includes(" is /")) {
     return { kind: "file", output: out };
   }
 
   // hashed path (zsh)
-  if (/\bis hashed\s*\(\//.test(first)) return { kind: "file", output: out };
+  if (first.includes(" is hashed (") && first.includes("/")) return { kind: "file", output: out };
 
   return { kind: "unknown", output: out };
 }
