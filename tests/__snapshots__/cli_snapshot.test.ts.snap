@@ -1,17 +1,5 @@
 // Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
-exports[`CLI output snapshots blocked message (enforce) 1`] = `
-"
-🛡️ ShellShield BLOCKED: Destructive command 'rm' detected
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ACTION REQUIRED: trash /tmp/test
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Bypass: SHELLSHIELD_SKIP=1 <command>
-Hint:   set SHELLSHIELD_MODE=interactive for quick prompts
-ShellShield - Keeping your terminal safe.
-"
-`;
-
 exports[`CLI output snapshots permissive warning 1`] = `
 "⚠️  ShellShield WARNING: Command 'rm -rf /tmp/test' would be blocked in enforce mode.
 Reason: Destructive command 'rm' detected
@@ -45,5 +33,17 @@ exports[`CLI output snapshots interactive approve/cancel messaging 2`] = `
    Are you sure you want to execute this? [y/N] \x1B[49Gy
 
 \x1B[0m\x1B[31m\x1B[32mApproved. Command will execute.\x1B[0m\x1B[0m
+"
+`;
+
+exports[`CLI output snapshots blocked message (enforce) 1`] = `
+"
+🛡️ ShellShield BLOCKED: Destructive command 'rm' detected
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACTION REQUIRED: trash /tmp/test
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Bypass: SHELLSHIELD_SKIP=1 <command>
+Hint:   set SHELLSHIELD_MODE=interactive for quick prompts
+ShellShield - Keeping your terminal safe.
 "
 `;
