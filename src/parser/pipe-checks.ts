@@ -11,12 +11,19 @@ export function checkPipeToShell(
   trustedDomains: string[]
 ): BlockResult | null {
   for (const arg of args) {
-    if (/^https?:\/\/[^/]+:[^/]+@/.test(arg)) {
-      return {
-        blocked: true,
-        reason: "CREDENTIAL EXPOSURE DETECTED",
-        suggestion: "Commands should not include credentials in URLs. Use environment variables or netrc.",
-      };
+    if (arg.includes("://") && arg.includes("@")) {
+      try {
+        const urlObj = new URL(arg);
+        if (urlObj.username || urlObj.password) {
+          return {
+            blocked: true,
+            reason: "CREDENTIAL EXPOSURE DETECTED",
+            suggestion: "Commands should not include credentials in URLs. Use environment variables or netrc.",
+          };
+        }
+      } catch {
+        continue;
+      }
     }
   }
 

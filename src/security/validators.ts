@@ -1,8 +1,37 @@
 import { TerminalInjectionResult } from "../types";
 
 export function hasHomograph(str: string): { detected: boolean; char?: string } {
-  const urls = str.match(/https?:\/\/[^\s"'`]+/g) || [];
-  const candidates = urls.length > 0 ? urls : str.match(/\b[^\s]+\.[^\s]+\b/g) || [];
+  const urls: string[] = [];
+  let currentPos = 0;
+  while (true) {
+    const httpIdx = str.indexOf("http://", currentPos);
+    const httpsIdx = str.indexOf("https://", currentPos);
+    let startIdx = -1;
+    if (httpIdx !== -1 && httpsIdx !== -1) startIdx = Math.min(httpIdx, httpsIdx);
+    else if (httpIdx !== -1) startIdx = httpIdx;
+    else if (httpsIdx !== -1) startIdx = httpsIdx;
+
+    if (startIdx === -1) break;
+
+    let endIdx = startIdx;
+    while (endIdx < str.length && !/[\s"'`]/.test(str[endIdx])) {
+      endIdx++;
+    }
+    urls.push(str.slice(startIdx, endIdx));
+    currentPos = endIdx;
+  }
+
+  const candidates: string[] = [];
+  if (urls.length > 0) {
+    candidates.push(...urls);
+  } else {
+    const tokens = str.split(/\s+/);
+    for (const token of tokens) {
+      if (token.includes(".") && !token.startsWith(".") && !token.endsWith(".")) {
+        candidates.push(token);
+      }
+    }
+  }
 
   for (const token of candidates) {
     let host = "";

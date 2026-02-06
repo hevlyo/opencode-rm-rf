@@ -8,7 +8,10 @@ export function isCriticalPath(path: string): boolean {
     normalized = normalized[0] + ":" + "/" + normalized.slice(2);
   }
 
-  normalized = normalized.replace(/\/+$/, "");
+  normalized = normalized.endsWith("/") ? normalized.slice(0, -1) : normalized;
+  while (normalized.endsWith("/")) {
+    normalized = normalized.slice(0, -1);
+  }
   if (!normalized || normalized === "/" || /^[a-z]:$/.test(normalized)) return true;
 
   if (CRITICAL_PATHS.has(normalized) || CRITICAL_PATHS.has(normalized.replace(/\//g, ""))) {
@@ -29,7 +32,10 @@ export function isCriticalPath(path: string): boolean {
 }
 
 export function isSensitivePath(path: string): boolean {
-  const normalized = path.replace(/\/+$/, "");
+  let normalized = path;
+  while (normalized.length > 1 && normalized.endsWith("/")) {
+    normalized = normalized.slice(0, -1);
+  }
   let fullPath = normalized;
   if (normalized.startsWith("~")) {
     const home = homedir();
