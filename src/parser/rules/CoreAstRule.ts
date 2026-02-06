@@ -80,12 +80,15 @@ export class CoreAstRule implements SecurityRule {
 
   private handleOperator(opEntry: { op: string }, nextEntry: ParsedEntry | undefined): BlockResult | null {
     if (opEntry.op === "<(") {
-      if (typeof nextEntry === "string" && (nextEntry === "curl" || nextEntry === "wget")) {
-        return {
-          blocked: true,
-          reason: "PROCESS SUBSTITUTION DETECTED",
-          suggestion: "Executing remote scripts via process substitution is dangerous.",
-        };
+      if (typeof nextEntry === "string") {
+        const normalizedNext = normalizeCommandName(nextEntry);
+        if (normalizedNext === "curl" || normalizedNext === "wget") {
+          return {
+            blocked: true,
+            reason: "PROCESS SUBSTITUTION DETECTED",
+            suggestion: "Executing remote scripts via process substitution is dangerous.",
+          };
+        }
       }
     }
     return null;
